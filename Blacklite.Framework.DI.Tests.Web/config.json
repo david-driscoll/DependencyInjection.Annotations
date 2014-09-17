@@ -1,0 +1,7 @@
+﻿{
+    "Data": {
+        "DefaultConnection": { 
+            "ConnectionString": "Server=(localdb)\\mssqllocaldb;Database=aspnetvnext-Blacklite.Framework.DI.Tests.Web-a7c520f1-a39b-4fa8-a53a-a5d0c88b10dc;Trusted_Connection=True;MultipleActiveResultSets=true"
+        }
+    }
+}

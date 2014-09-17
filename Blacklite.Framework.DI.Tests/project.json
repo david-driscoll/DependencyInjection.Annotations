@@ -1,0 +1,19 @@
+﻿{
+    "dependencies": {
+        "Blacklite.Framework.DI": "",
+        "Xunit.KRunner": "1.0.0-*"
+    },
+    "compilationOptions": {
+        "languageVersion": "experimental"
+    },
+    "commands": {
+        "test": "Xunit.KRunner"
+    },
+    "frameworks": {
+        "aspnetcore50": {
+            "dependencies": {
+                "System.Runtime": "4.0.20.0"
+            }
+        }
+    }
+}

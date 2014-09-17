@@ -1,0 +1,1 @@
+xcopy /Y /S /I "..\..\Blacklite.Framework.DI.Compiler\*.cs" "..\compiler\preprocess"
