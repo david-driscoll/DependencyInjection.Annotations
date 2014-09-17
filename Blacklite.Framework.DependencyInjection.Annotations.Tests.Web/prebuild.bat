@@ -1,0 +1,1 @@
+xcopy /Y /S /I "..\Blacklite.Framework.DependencyInjection.Annotations.Compiler\*.cs" "compiler\preprocess"
