@@ -17,11 +17,11 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
         public void BeforeCompile(IBeforeCompileContext context)
         {
             var statements = new List<CodeAnalysisExtensions.Container<ClassDeclarationSyntax, INamedTypeSymbol>>();
-            Console.WriteLine("Assembly Name: {0}", context.CSharpCompilation.AssemblyName);
+            //Console.WriteLine("Assembly Name: {0}", context.CSharpCompilation.AssemblyName);
 
             foreach (var cxt in from tree in context.CSharpCompilation.SyntaxTrees select new { Model = context.CSharpCompilation.GetSemanticModel(tree), Tree = tree, Root = tree.GetRoot() })
             {
-                Console.WriteLine("File Path: {0}", cxt.Tree.FilePath);
+                //Console.WriteLine("File Path: {0}", cxt.Tree.FilePath);
                 var classesWithAttribute = CodeAnalysisExtensions.GetClasses(cxt.Model)
                     .Where(x => x.Symbol.GetAttributes()
                         .Any(z => z.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute")));
@@ -32,7 +32,7 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
                 }
             }
 
-            Console.WriteLine(statements.Any());
+            //Console.WriteLine(statements.Any());
 
             var variableName = "collection";
             var identifier = SyntaxFactory.IdentifierName(variableName);
@@ -71,16 +71,54 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
             foreach (var container in statements)
             {
                 var symbol = container.Symbol;
-                var attribute = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute"));
+                var attributeSymbol = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute"));
+                var attributeDeclaration = container.Declaration.AttributeLists
+                    .SelectMany(z => z.Attributes)
+                    .Single(z => z.Name.ToString().Contains("ImplementationOf"));
 
-                var serviceType = attribute.ConstructorArguments[0].Value.ToString();
-                var serviceName = buildNameSyntax(serviceType);
+                var serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
+                var serviceName = serviceType.Split('.').Last();
+                var serviceQualifiedName = buildNameSyntax(serviceType);
 
                 var implementationType = symbol.ToDisplayString();
-                var implementationName = buildNameSyntax(implementationType);
+                var implementationName = implementationType.Split('.').Last();
+                var implementationQualifiedName = buildNameSyntax(implementationType);
+
+                var baseTypes = new List<string>();
+                var impType = symbol;
+                while (impType != null)
+                {
+                    baseTypes.Add(impType.ToDisplayString());
+                    impType = impType.BaseType;
+                }
+
+                //Console.WriteLine("Base Types: {0}", string.Join(", ", baseTypes));
+                //Console.WriteLine("Interfaces: {0}", string.Join(", ", symbol.AllInterfaces.Select(z => z.ToDisplayString())));
+
+                // TODO: Enforce implementation is assignable to service
+                // Diagnostic error?
+                var potentialBaseTypes = baseTypes.Concat(symbol.AllInterfaces.Select(z => z.ToDisplayString()));
+                if (!potentialBaseTypes.Any(z => serviceType.Equals(z, StringComparison.OrdinalIgnoreCase)))
+                {
+                    context.Diagnostics.Add(
+                        Diagnostic.Create(
+                            new DiagnosticDescriptor(
+                                "DI0001",
+                                "Implementation miss-match",
+                                "The implementation '{0}' does not implement the service '{1}'",
+                                "DependencyInjection",
+                                DiagnosticSeverity.Error,
+                                true
+                            ),
+                            Location.Create(attributeDeclaration.SyntaxTree, attributeDeclaration.Span),
+                            implementationName,
+                            serviceName
+                        )
+                    );
+                }
 
                 string lifecycle;
-                switch ((int)attribute.ConstructorArguments[1].Value)
+                switch ((int)attributeSymbol.ConstructorArguments[1].Value)
                 {
                     case 1:
                         lifecycle = "Scoped";
@@ -107,8 +145,8 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
                                 SyntaxFactory.SeparatedList(
                                     new[]
                                     {
-                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(serviceName)),
-                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(implementationName))
+                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(serviceQualifiedName)),
+                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(implementationQualifiedName))
                                     })
                                 )
                             )
@@ -156,7 +194,7 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
             //var newSyntaxTree = SyntaxFactory.ParseSyntaxTree(newCompilationUnit.GetText().ToString(), context.CSharpCompilation.SyntaxTrees[0].Options, "", Encoding.UTF8);
             var newSyntaxTree = SyntaxFactory.SyntaxTree(newCompilationUnit, context.CSharpCompilation.SyntaxTrees[0].Options, "", Encoding.UTF8);
 
-            Console.WriteLine(newCompilationUnit.GetText());
+            //Console.WriteLine(newCompilationUnit.GetText());
 
             var newCompilation = context.CSharpCompilation.AddSyntaxTrees(newSyntaxTree);
 
@@ -165,7 +203,7 @@ namespace Blacklite.Framework.DependencyInjection.Annotations.Compiler
 
         public void AfterCompile(IAfterCompileContext context)
         {
-
+            // Not Used
         }
     }
 }
