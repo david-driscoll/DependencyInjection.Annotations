@@ -17,7 +17,7 @@
         "languageVersion": "experimental"
     },
     "frameworks": {
-        "aspnet50": {
+        "net45": {
             "dependencies": {
                 "System.Runtime": "4.0.20.0",
                 "System.Threading": "4.0.0.0",

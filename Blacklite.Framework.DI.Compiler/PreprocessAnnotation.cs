@@ -17,12 +17,12 @@ namespace Blacklite.Framework.DI.Compiler
         public void BeforeCompile(IBeforeCompileContext context)
         {
             var statements = new List<CodeAnalysisExtensions.Container<ClassDeclarationSyntax, INamedTypeSymbol>>();
-            Console.WriteLine("Assembly Name: {0}", context.CSharpCompilation.AssemblyName);
+            //Console.WriteLine("Assembly Name: {0}", context.CSharpCompilation.AssemblyName);
 
             foreach (var cxt in from tree in context.CSharpCompilation.SyntaxTrees select new { Model = context.CSharpCompilation.GetSemanticModel(tree), Tree = tree, Root = tree.GetRoot() })
             {
-                Console.WriteLine("File Path: {0}", cxt.Tree.FilePath);
-                Console.WriteLine(cxt.Tree.GetText().ToString());
+                //Console.WriteLine("File Path: {0}", cxt.Tree.FilePath);
+                //Console.WriteLine(cxt.Tree.GetText().ToString());
                 var classesWithAttribute = CodeAnalysisExtensions.GetClasses(cxt.Model)
                     .Where(x => x.Symbol.GetAttributes()
                         .Any(z => z.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute")));
@@ -33,7 +33,7 @@ namespace Blacklite.Framework.DI.Compiler
                 }
             }
 
-            Console.WriteLine(statements.Any());
+            //Console.WriteLine(statements.Any());
 
             var variableName = "collection";
             var identifier = SyntaxFactory.IdentifierName(variableName);
@@ -73,90 +73,97 @@ namespace Blacklite.Framework.DI.Compiler
             {
                 var symbol = container.Symbol;
                 var attributeSymbol = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute"));
-                var attributeDeclaration = container.Declaration.AttributeLists
-                    .SelectMany(z => z.Attributes)
-                    .Single(z => z.Name.ToString().Contains("ImplementationOf"));
-
-                Console.WriteLine(attributeSymbol.ToString());
-                Console.WriteLine(string.Join(", ",attributeSymbol.ConstructorArguments.Select(z => z.ToString())));
-
-                var serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
-                var serviceName = serviceType.Split('.').Last();
-                var serviceQualifiedName = buildNameSyntax(serviceType);
-
-                var implementationType = symbol.ToDisplayString();
-                var implementationName = implementationType.Split('.').Last();
-                var implementationQualifiedName = buildNameSyntax(implementationType);
-
-                var baseTypes = new List<string>();
-                var impType = symbol;
-                while (impType != null)
+                if (attributeSymbol.ConstructorArguments.Length == 0)
                 {
-                    baseTypes.Add(impType.ToDisplayString());
-                    impType = impType.BaseType;
+                    //Console.WriteLine("ATtribute symbol is strange... {0} on {1}", attributeSymbol.ToString(), symbol.ToString());
                 }
-
-                //Console.WriteLine("Base Types: {0}", string.Join(", ", baseTypes));
-                //Console.WriteLine("Interfaces: {0}", string.Join(", ", symbol.AllInterfaces.Select(z => z.ToDisplayString())));
-
-                // TODO: Enforce implementation is assignable to service
-                // Diagnostic error?
-                var potentialBaseTypes = baseTypes.Concat(symbol.AllInterfaces.Select(z => z.ToDisplayString()));
-                if (!potentialBaseTypes.Any(z => serviceType.Equals(z, StringComparison.OrdinalIgnoreCase)))
+                else
                 {
-                    context.Diagnostics.Add(
-                        Diagnostic.Create(
-                            new DiagnosticDescriptor(
-                                "DI0001",
-                                "Implementation miss-match",
-                                "The implementation '{0}' does not implement the service '{1}'",
-                                "DependencyInjection",
-                                DiagnosticSeverity.Error,
-                                true
-                            ),
-                            Location.Create(attributeDeclaration.SyntaxTree, attributeDeclaration.Span),
-                            implementationName,
-                            serviceName
-                        )
-                    );
-                }
+                    var attributeDeclaration = container.Declaration.AttributeLists
+                        .SelectMany(z => z.Attributes)
+                        .Single(z => z.Name.ToString().Contains("ImplementationOf"));
 
-                string lifecycle;
-                switch ((int)attributeSymbol.ConstructorArguments[1].Value)
-                {
-                    case 1:
-                        lifecycle = "Scoped";
-                        break;
-                    case 0:
-                        lifecycle = "Singleton";
-                        break;
-                    default:
-                        lifecycle = "Transient";
-                        break;
-                }
+                    //Console.WriteLine(attributeSymbol.ToString());
+                    //Console.WriteLine(string.Join(", ", attributeSymbol.ConstructorArguments.Select(z => z.ToString())));
+
+                    var serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
+                    var serviceName = serviceType.Split('.').Last();
+                    var serviceQualifiedName = buildNameSyntax(serviceType);
+
+                    var implementationType = symbol.ToDisplayString();
+                    var implementationName = implementationType.Split('.').Last();
+                    var implementationQualifiedName = buildNameSyntax(implementationType);
+
+                    var baseTypes = new List<string>();
+                    var impType = symbol;
+                    while (impType != null)
+                    {
+                        baseTypes.Add(impType.ToDisplayString());
+                        impType = impType.BaseType;
+                    }
+
+                    //Console.WriteLine("Base Types: {0}", string.Join(", ", baseTypes));
+                    //Console.WriteLine("Interfaces: {0}", string.Join(", ", symbol.AllInterfaces.Select(z => z.ToDisplayString())));
+
+                    // TODO: Enforce implementation is assignable to service
+                    // Diagnostic error?
+                    var potentialBaseTypes = baseTypes.Concat(symbol.AllInterfaces.Select(z => z.ToDisplayString()));
+                    if (!potentialBaseTypes.Any(z => serviceType.Equals(z, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        context.Diagnostics.Add(
+                            Diagnostic.Create(
+                                new DiagnosticDescriptor(
+                                    "DI0001",
+                                    "Implementation miss-match",
+                                    "The implementation '{0}' does not implement the service '{1}'",
+                                    "DependencyInjection",
+                                    DiagnosticSeverity.Error,
+                                    true
+                                ),
+                                Location.Create(attributeDeclaration.SyntaxTree, attributeDeclaration.Span),
+                                implementationName,
+                                serviceName
+                            )
+                        );
+                    }
+
+                    string lifecycle;
+                    switch ((int)attributeSymbol.ConstructorArguments[1].Value)
+                    {
+                        case 1:
+                            lifecycle = "Scoped";
+                            break;
+                        case 0:
+                            lifecycle = "Singleton";
+                            break;
+                        default:
+                            lifecycle = "Transient";
+                            break;
+                    }
 
 
-                var expression = SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            identifier, name: SyntaxFactory.IdentifierName(
-                                SyntaxFactory.Identifier("Add" + lifecycle)
-                                )
-                            ),
+                    var expression = SyntaxFactory.ExpressionStatement(
+                        SyntaxFactory.InvocationExpression(
+                            SyntaxFactory.MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                identifier, name: SyntaxFactory.IdentifierName(
+                                    SyntaxFactory.Identifier("Add" + lifecycle)
+                                    )
+                                ),
 
-                            SyntaxFactory.ArgumentList(
-                                SyntaxFactory.SeparatedList(
-                                    new[]
+                                SyntaxFactory.ArgumentList(
+                                    SyntaxFactory.SeparatedList(
+                                        new[]
                                     {
                                         SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(serviceQualifiedName)),
                                         SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(implementationQualifiedName))
                                     })
+                                    )
                                 )
-                            )
-                    );
+                        );
 
-                nodes.Add(expression);
+                    nodes.Add(expression);
+                }
             }
 
             var @method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IServiceCollection"), "AddImplementations")
