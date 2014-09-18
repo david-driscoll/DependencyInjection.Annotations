@@ -63,7 +63,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             return collection;
         }
@@ -105,7 +105,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             collection.AddTransient(typeof (IProviderA), typeof (ProviderA));
             return collection;
@@ -149,7 +149,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             collection.AddTransient(typeof (IProviderA), typeof (ProviderA));
             return collection;
@@ -193,7 +193,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             collection.AddScoped(typeof (IProviderA), typeof (ProviderA));
             return collection;
@@ -236,7 +236,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             collection.AddSingleton(typeof (IProviderA), typeof (ProviderA));
             return collection;
@@ -321,7 +321,7 @@ namespace __generated
 {
     public static class ServicesContainerExtensions
     {
-        public static IServiceCollection AddImplementations(IServiceCollection collection)
+        public static IServiceCollection AddImplementations(this IServiceCollection collection)
         {
             collection.AddSingleton(typeof (IProviderA), typeof (ProviderA));
             collection.AddTransient(typeof (IProviderB1), typeof (ProviderB1));
