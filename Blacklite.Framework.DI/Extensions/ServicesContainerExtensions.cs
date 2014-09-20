@@ -1,4 +1,4 @@
-﻿using Microsoft.Framework.DependencyInjection;
+using Microsoft.Framework.DependencyInjection;
 using Microsoft.Framework.Runtime;
 using System;
 using System.Collections.Generic;
@@ -11,45 +11,48 @@ namespace Blacklite.Framework.DI
     {
         internal const string CompileTimeTypeName = "__generated.ServicesContainerExtensions";
 
-        public static IServiceCollection FindAllImplementations(this IServiceCollection collection, Type type)
+        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, object context, bool compile = true)
         {
+            if (context == null)
+            {
+                throw new ArgumentNullException("context");
+            }
+            
+            return collection.AddFromAssembly(context.GetType(), compile);
+        }
+
+        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, Type type, bool compile = true)
+        {
+            if (collection == null)
+            {
+                throw new ArgumentNullException("collection");
+            }
+
 #if ASPNETCORE50
-            return collection.FindAllImplementations(type.GetTypeInfo().Assembly);
+            return collection.AddFromAssembly(type.GetTypeInfo().Assembly, compile);
 #else
-            return collection.FindAllImplementations(type.Assembly);
+            return collection.AddFromAssembly(type.Assembly, compile);
 #endif
         }
 
-        public static IServiceCollection FindAllImplementations(this IServiceCollection collection, Assembly assembly)
+        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, Assembly assembly, bool compile = true)
         {
-            var generatedExtensions = assembly.GetType(CompileTimeTypeName);
-            if (generatedExtensions != null)
+            if (collection == null)
             {
-                // In theory the following call should work... but with current (I hope) tooling, the preprocess is not indentified properly.
-                // __generated.ServicesContainerExtensions.AddImplementations(collection);
-                generatedExtensions.GetMethod("AddImplementations").Invoke(null, new object[] { collection });
-            }
-            else
-            {
-                FindAllRuntimeImplementations(collection, assembly);
+                throw new ArgumentNullException("collection");
             }
 
-            return collection;
-        }
-
-        private static void FindAllRuntimeImplementations(IServiceCollection collection, Assembly assembly)
-        {
             var services = assembly.GetTypes()
-            .Select(x => new
-            {
-                Type = x,
+                .Select(x => new
+                {
+                    Type = x,
 #if ASPNETCORE50
                     Attribute = x.GetTypeInfo().GetCustomAttribute<ImplementationOfAttribute>(true)
 #else
-                Attribute = x.GetCustomAttribute<ImplementationOfAttribute>(true)
+                    Attribute = x.GetCustomAttribute<ImplementationOfAttribute>(true)
 #endif
-            })
-            .Where(x => x.Attribute != null);
+                })
+                .Where(x => x.Attribute != null);
 
             foreach (var service in services)
             {
@@ -78,6 +81,8 @@ namespace Blacklite.Framework.DI
                         service.Type.FullName));
                 }
             }
+
+            return collection;
         }
     }
 }

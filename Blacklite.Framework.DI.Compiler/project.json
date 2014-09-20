@@ -1,23 +1,20 @@
-﻿{
+{
     "dependencies": {
         "Microsoft.CodeAnalysis.Common": "0.7.4091604-beta",
         "Microsoft.CodeAnalysis.CSharp": "0.7.4091604-beta",
-        "Microsoft.Framework.DependencyInjection": "1.0.0-*",
-        "System.Runtime": "4.0.20.0",
-        "System.Runtime": "4.0.20.0",
-        "System.Threading": "4.0.0.0",
-        "System.Threading.Tasks": "4.0.10.0",
-        "System.IO": "4.0.0.0",
-        "System.Text.Encoding": "4.0.10.0",
-        "System.Linq": "4.0.0.0",
-        "System.Linq.Expressions": "4.0.0.0",
-        "System.Console": ""
+        "Microsoft.Framework.DependencyInjection": "1.0.0-*"
     },
     "compilationOptions": {
         "languageVersion": "experimental"
     },
+	"commands": {
+	},
     "frameworks": {
-        "net45": {
+        "aspnet50": {
+            "dependencies": {
+            }
+        },
+        "aspnetcore50": {
             "dependencies": {
                 "System.Runtime": "4.0.20.0",
                 "System.Threading": "4.0.0.0",

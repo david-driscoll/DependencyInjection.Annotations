@@ -12,14 +12,75 @@ using Microsoft.Framework.Runtime;
 
 namespace Blacklite.Framework.DI.Compiler
 {
-    public class Container<TDeclaration, TSymbol>(TDeclaration declaration, TSymbol symbol)
+    public class Container<TDeclaration, TSymbol>
     {
-        public TDeclaration Declaration { get; } = declaration;
-        public TSymbol Symbol { get; } = symbol;
+        public Container(TDeclaration declaration, TSymbol symbol) {
+            Declaration = declaration;
+            Symbol = symbol;
+        }
+
+        public TDeclaration Declaration { get; private set; }
+        public TSymbol Symbol { get; private set; }
     }
 
     public class PreprocessAnnotation : ICompileModule
     {
+        private IEnumerable<Container<InvocationExpressionSyntax, IMethodSymbol>> GetAddFromAssemblyMethodCall(SyntaxTree syntaxTree, SemanticModel model)
+        {
+            // Find all classes that have our attribute.
+            var addFromAssemblyExpressions = syntaxTree
+                       .GetRoot()
+                       .DescendantNodes()
+                       .OfType<MemberAccessExpressionSyntax>()
+                       .Where(declaration => declaration.Name.ToString().Contains("AddFromAssembly"))
+                       .Where(declaration => declaration.Parent is InvocationExpressionSyntax)
+                       .Where(declaration => model.GetSymbolInfo(declaration.Parent).Symbol is IMethodSymbol)
+                       .Select(declaration => new Container<InvocationExpressionSyntax, IMethodSymbol>((InvocationExpressionSyntax)declaration.Parent, (IMethodSymbol)model.GetSymbolInfo(declaration.Parent).Symbol));
+
+            // Each return the container for each class
+            foreach (var expression in addFromAssemblyExpressions)
+            {
+                // 1 Argument means the default parameter was omitted
+                // We will replace it, if it's valid
+                // 2 Arguments means that the default parameter was defined, and we should obey it.
+                if (expression.Declaration.ArgumentList.Arguments.Count() == 1 || (expression.Declaration.ArgumentList.Arguments.Count() > 1 && expression.Declaration.ArgumentList.Arguments[1].ToString() == "true"))
+                {
+                    ClassDeclarationSyntax classSyntax;
+                    SyntaxNode parent = expression.Declaration;
+                    while (!(parent is ClassDeclarationSyntax))
+                    {
+                        parent = parent.Parent;
+                    }
+                    classSyntax = parent as ClassDeclarationSyntax;
+                    Console.WriteLine(classSyntax.Identifier);
+                    Console.WriteLine(expression.Declaration.ArgumentList.Arguments[0].ToString());
+
+                    var replace = false;
+
+                    var typeofExpression = expression.Declaration.ArgumentList.Arguments[0].Expression as TypeOfExpressionSyntax;
+                    if (typeofExpression != null)
+                    {
+                        if (typeofExpression.Type.ToString() == classSyntax.Identifier.ToString())
+                        {
+                            replace = true;
+                        }
+                    }
+
+                    var thisExpression = expression.Declaration.ArgumentList.Arguments[0].Expression as ThisExpressionSyntax;
+                    if (thisExpression != null)
+                    {
+                        replace = true;
+                    }
+
+                    if (replace)
+                    {
+                        //Console.WriteLine(expression.Declaration.ArgumentList.Arguments[1].ToString());
+                        yield return expression;
+                    }
+                }
+            }
+        }
+
         private IEnumerable<Container<ClassDeclarationSyntax, INamedTypeSymbol>> GetClassesWithImplementationAttribute(SyntaxTree syntaxTree, SemanticModel model)
         {
             // Find all classes that have our attribute.
@@ -69,7 +130,7 @@ namespace Blacklite.Framework.DI.Compiler
             return nameSyntax;
         }
 
-        public IEnumerable<StatementSyntax> GetStatements(IBeforeCompileContext context, IEnumerable<Container<ClassDeclarationSyntax, INamedTypeSymbol>> containers)
+        public IEnumerable<Func<string, IEnumerable<StatementSyntax>>> GetStatements(IBeforeCompileContext context, IEnumerable<Container<ClassDeclarationSyntax, INamedTypeSymbol>> containers)
         {
             foreach (var container in containers)
             {
@@ -77,19 +138,32 @@ namespace Blacklite.Framework.DI.Compiler
             }
         }
 
-        public StatementSyntax GetStatement(IBeforeCompileContext context, INamedTypeSymbol symbol, ClassDeclarationSyntax declaration)
+        public Func<string, IEnumerable<StatementSyntax>> GetStatement(IBeforeCompileContext context, INamedTypeSymbol symbol, ClassDeclarationSyntax declaration)
         {
             var attributeSymbol = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute"));
             var attributeDeclaration = declaration.AttributeLists
                 .SelectMany(z => z.Attributes)
                 .Single(z => z.Name.ToString().Contains("ImplementationOf"));
 
-
-            var serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
-            var serviceQualifiedName = BuildQualifiedName(serviceType);
-
             var implementationType = symbol.ToDisplayString();
             var implementationQualifiedName = BuildQualifiedName(implementationType);
+
+            string serviceType = null;
+            IEnumerable<NameSyntax> serviceQualifiedNames = symbol.AllInterfaces
+                .Select(z => BuildQualifiedName(z.ToDisplayString()));
+
+            if (declaration.Modifiers.Any(z => z.RawKind == (int)SyntaxKind.PublicKeyword))
+            {
+                serviceQualifiedNames = serviceQualifiedNames.Union(new NameSyntax[] { implementationQualifiedName });
+            }
+
+            if (attributeSymbol.ConstructorArguments.Count() > 0 && attributeSymbol.ConstructorArguments[0].Value != null)
+            {
+                Console.WriteLine(attributeSymbol.ConstructorArguments[0].Value);
+                serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
+                serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType) };
+            }
+
 
             var baseTypes = new List<string>();
             var impType = symbol;
@@ -108,7 +182,7 @@ namespace Blacklite.Framework.DI.Compiler
             // This is where some of the power comes out.
             // We now have the ability to throw compile time errors if we believe something is wrong.
             // This could be extended to support generic types, and potentially matching compatible open generic types together to build a list.
-            if (!potentialBaseTypes.Any(z => serviceType.Equals(z, StringComparison.OrdinalIgnoreCase)))
+            if (serviceType != null && !potentialBaseTypes.Any(z => serviceType.Equals(z, StringComparison.OrdinalIgnoreCase)))
             {
                 var serviceName = serviceType.Split('.').Last();
                 var implementationName = implementationType.Split('.').Last();
@@ -134,7 +208,7 @@ namespace Blacklite.Framework.DI.Compiler
             var lifecycle = GetLifecycle((int)attributeSymbol.ConstructorArguments[1].Value);
 
             // Build the Statement
-            return GetCollectionExpressionStatement(lifecycle, serviceQualifiedName, implementationQualifiedName);
+            return GetCollectionExpressionStatement(lifecycle, serviceQualifiedNames, implementationQualifiedName);
         }
 
         public string GetLifecycle(int enumValue)
@@ -156,25 +230,29 @@ namespace Blacklite.Framework.DI.Compiler
             return lifecycle;
         }
 
-        public StatementSyntax GetCollectionExpressionStatement(string lifecycle, NameSyntax serviceQualifiedName, NameSyntax implementationQualifiedName)
+        public Func<string, IEnumerable<StatementSyntax>> GetCollectionExpressionStatement(string lifecycle, IEnumerable<NameSyntax> serviceQualifiedNames, NameSyntax implementationQualifiedName)
         {
             // I hear there is a better way to do this... that will be released sometime.
-            return SyntaxFactory.ExpressionStatement(
-                SyntaxFactory.InvocationExpression(
-                    SyntaxFactory.MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName("collection"),
-                        name: SyntaxFactory.IdentifierName(SyntaxFactory.Identifier("Add" + lifecycle))
-                    ),
-                    SyntaxFactory.ArgumentList(
-                        SyntaxFactory.SeparatedList(
-                            new[] {
-                                    SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(serviceQualifiedName)),
-                                    SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(implementationQualifiedName))
-                                })
+            return (string identifierName) =>
+            {
+                return serviceQualifiedNames.Select(serviceName => SyntaxFactory.ExpressionStatement(
+                        SyntaxFactory.InvocationExpression(
+                            SyntaxFactory.MemberAccessExpression(
+                                SyntaxKind.SimpleMemberAccessExpression,
+                                SyntaxFactory.IdentifierName(identifierName),
+                                name: SyntaxFactory.IdentifierName(SyntaxFactory.Identifier("Add" + lifecycle))
+                            ),
+                            SyntaxFactory.ArgumentList(
+                                SyntaxFactory.SeparatedList(
+                                    new[] {
+                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(serviceName)),
+                                        SyntaxFactory.Argument(SyntaxFactory.TypeOfExpression(implementationQualifiedName))
+                                    })
+                            )
                         )
                     )
                 );
+            };
         }
 
         public void BeforeCompile(IBeforeCompileContext context)
@@ -186,26 +264,53 @@ namespace Blacklite.Framework.DI.Compiler
                     Model = context.CSharpCompilation.GetSemanticModel(tree),
                     SyntaxTree = tree,
                     Root = tree.GetRoot()
-                })
-                .SelectMany(ctx => GetClassesWithImplementationAttribute(ctx.SyntaxTree, ctx.Model));
+                });
+
+
+            Console.WriteLine(string.Join(", ", context.CSharpCompilation.GetDiagnostics().Select(z => z.ToString())));
+            var addAssemblyMethodCalls = containers
+                .SelectMany(ctx => GetAddFromAssemblyMethodCall(ctx.SyntaxTree, ctx.Model));
 
             // Build the registration statements out of the containers.
-            var nodes = GetStatements(context, containers);
+            var nodes = GetStatements(context, containers.SelectMany(ctx => GetClassesWithImplementationAttribute(ctx.SyntaxTree, ctx.Model)))
+                .ToArray();
 
-            // Build our new extension method.
+            var newCompilation = context.CSharpCompilation;
+
+            foreach (var method in addAssemblyMethodCalls)
+            {
+                var identifierName = ((MemberAccessExpressionSyntax)method.Declaration.Expression).Expression.ToString();
+                Console.WriteLine(identifierName);
+
+                var methodNodes = nodes.SelectMany(x => x(identifierName));
+
+                var oldSyntaxRoot = method.Declaration.SyntaxTree.GetRoot();
+                var newSyntaxRoot = oldSyntaxRoot
+                    .ReplaceNode(method.Declaration.Parent, methodNodes)
+                    .NormalizeWhitespace();
+
+                var oldSyntaxTree = method.Declaration.SyntaxTree;
+                var newSyntaxTree = oldSyntaxTree.WithRootAndOptions(newSyntaxRoot, oldSyntaxTree.Options);
+
+                newCompilation = newCompilation.ReplaceSyntaxTree(oldSyntaxTree, newSyntaxTree);
+            }
+
+
+
+            /*// Build our new extension method.
             // This baby can technically be called as an extension once vNext compiles this code
             // But currently the best way for (tooling) is to call this methid via reflection.
             var @method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IServiceCollection"), "AddImplementations")
-                    .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
-                    .AddParameterListParameters(
-                        SyntaxFactory.Parameter(
-                            default(SyntaxList<AttributeListSyntax>),
-                            default(SyntaxTokenList),
-                            SyntaxFactory.IdentifierName("IServiceCollection"),
-                            SyntaxFactory.Identifier("collection"),
-                            null
-                        ).AddModifiers(SyntaxFactory.Token(SyntaxKind.ThisKeyword))
-                    )
+                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
+                .AddParameterListParameters(
+                    SyntaxFactory.Parameter(
+                        default(SyntaxList<AttributeListSyntax>),
+                        default(SyntaxTokenList),
+                        SyntaxFactory.IdentifierName("IServiceCollection"),
+                        SyntaxFactory.Identifier("collection"),
+                        null
+                    ).AddModifiers(SyntaxFactory.Token(SyntaxKind.ThisKeyword))
+                )
                     // Add our statements
                     .AddBodyStatements(nodes.ToArray())
                     // Our method returns the IServiceCollection instance
@@ -232,7 +337,7 @@ namespace Blacklite.Framework.DI.Compiler
             var newSyntaxTree = SyntaxFactory.SyntaxTree(newCompilationUnit, context.CSharpCompilation.SyntaxTrees[0].Options);
 
             // Get a new C# compliation, with our new syntax tree
-            var newCompilation = context.CSharpCompilation.AddSyntaxTrees(newSyntaxTree);
+            var newCompilation = context.CSharpCompilation.AddSyntaxTrees(newSyntaxTree);*/
 
             // Replace the compliation with our new one.
             context.CSharpCompilation = newCompilation;

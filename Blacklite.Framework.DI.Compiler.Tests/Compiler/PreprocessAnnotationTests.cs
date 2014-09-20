@@ -1,4 +1,4 @@
-﻿using Blacklite.Framework.DI.Compiler;
+using Blacklite.Framework.DI.Compiler;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Framework.Runtime;
@@ -17,30 +17,50 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             return CSharpCompilation.Create("PreprocessAnnotationTests.dll",
                 references: new[] {
                 // This isn't very nice...
-                new MetadataImageReference(System.IO.File.OpenRead(@"C:\Windows\Microsoft.NET\Framework\v4.0.30319\mscorlib.dll"))
+                    new MetadataImageReference(System.IO.File.OpenRead(@"C:\Windows\Microsoft.NET\Framework\v4.0.30319\mscorlib.dll"))
                 })
                 // This way we don't have to reference anything but mscorlib.
                 .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
-                using System;
+                    using System;
 
-                public enum LifecycleKind {
-                    Singleton,
-                    Scoped,
-	                Transient
-                }
-
-                [AttributeUsage(AttributeTargets.Class)]
-                public class ImplementationOfAttribute : Attribute
-                {
-                    public ImplementationOfAttribute(Type serviceType, LifecycleKind lifecycle = LifecycleKind.Transient)
-                    {
-                        ServiceType = serviceType;
-                        Lifecycle = lifecycle;
+                    public enum LifecycleKind {
+                        Singleton,
+                        Scoped,
+	                    Transient
                     }
 
-                    public Type ServiceType { get; private set; }
-                    public LifecycleKind Lifecycle { get; private set; }
-                }"));
+                    [AttributeUsage(AttributeTargets.Class)]
+                    public class ImplementationOfAttribute : Attribute
+                    {
+                        public ImplementationOfAttribute(Type serviceType = null, LifecycleKind lifecycle = LifecycleKind.Transient)
+                        {
+                            ServiceType = serviceType;
+                            Lifecycle = lifecycle;
+                        }
+
+                        public Type ServiceType { get; set; }
+                        public LifecycleKind Lifecycle { get; set; }
+                    }
+
+                    public interface IServiceCollection {}
+
+                    public static class ServiceCollectionExtensions {
+                        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, Type type, bool compile = true) {
+                            return collection;
+                        }
+                    }"))
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                    namespace Temp {
+                        public class Startup {
+                            void Configure(IServiceCollection services) {
+                                services.AddFromAssembly(typeof(Startup), true);
+                            }
+
+                            public static int Main() { return 0; }
+                        }
+                    }"));
+                //.AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(
+                    //System.IO.File.ReadAllText(@"..\Blacklite.Framework.DI\Extensions\ServicesContainerExtensions.cs")));
         }
 
         [Fact]
@@ -53,22 +73,28 @@ namespace Blacklite.Framework.DI.Compiler.Tests
                 CSharpCompilation = compilation
             };
 
+            
+
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            return collection;
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
 
         [Fact]
@@ -99,19 +125,23 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            collection.AddTransient(typeof (IProviderA), typeof (ProviderA));
-            return collection;
+            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
 
 
@@ -143,19 +173,23 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            collection.AddTransient(typeof (IProviderA), typeof (ProviderA));
-            return collection;
+            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
 
 
@@ -187,19 +221,23 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            collection.AddScoped(typeof (IProviderA), typeof (ProviderA));
-            return collection;
+            services.AddScoped(typeof (IProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
 
         [Fact]
@@ -230,19 +268,23 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            collection.AddSingleton(typeof (IProviderA), typeof (ProviderA));
-            return collection;
+            services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
 
         [Fact]
@@ -315,24 +357,27 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
-            Assert.Equal(@"using Microsoft.Framework.DependencyInjection;
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
-namespace __generated
+            Assert.Equal(@"namespace Temp
 {
-    public static class ServicesContainerExtensions
+    public class Startup
     {
-        public static IServiceCollection AddImplementations(this IServiceCollection collection)
+        void Configure(IServiceCollection services)
         {
-            collection.AddSingleton(typeof (IProviderA), typeof (ProviderA));
-            collection.AddTransient(typeof (IProviderB1), typeof (ProviderB1));
-            collection.AddTransient(typeof (IProviderB), typeof (ProviderB));
-            collection.AddScoped(typeof (IProviderC), typeof (ProviderC));
-            return collection;
+            services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
+            services.AddTransient(typeof (IProviderB1), typeof (ProviderB1));
+            services.AddTransient(typeof (IProviderB), typeof (ProviderB));
+            services.AddScoped(typeof (IProviderC), typeof (ProviderC));
+        }
+
+        public static int Main()
+        {
+            return 0;
         }
     }
-}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
-
 
         [Fact]
         public void ReportsDiagnostics()
@@ -368,7 +413,309 @@ namespace __generated
 
             unit.BeforeCompile((IBeforeCompileContext)context);
 
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
             Assert.True(context.Diagnostics.Any());
+        }
+
+        [Fact]
+        public void AddFromAssemblyWorksWithThisExpression()
+        {
+            var compilation = GetCompilation();
+
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+        }
+
+        [Fact]
+        public void AddFromAssemblyIsLeftAloneForOtherTypes()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                    namespace Temp {
+                        public class NotStartup {
+                        }
+
+                        public class Startup2 {
+                            void Configure(IServiceCollection collection) {
+                                collection.AddFromAssembly(typeof(NotStartup), true);
+                            }
+                        }
+                    }"));
+
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+
+            Assert.Equal(@"
+                    namespace Temp {
+                        public class NotStartup {
+                        }
+
+                        public class Startup2 {
+                            void Configure(IServiceCollection collection) {
+                                collection.AddFromAssembly(typeof(NotStartup), true);
+                            }
+                        }
+                    }", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+        }
+
+        [Fact]
+        public void AddFromAssemblyIsLeftAloneWhenToldTo()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                    namespace Temp {
+                        public class Startup2 {
+                            void Configure(IServiceCollection collection) {
+                                collection.AddFromAssembly(typeof(Startup2), false);
+                            }
+                        }
+                    }"));
+
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+
+            Assert.Equal(@"
+                    namespace Temp {
+                        public class Startup2 {
+                            void Configure(IServiceCollection collection) {
+                                collection.AddFromAssembly(typeof(Startup2), false);
+                            }
+                        }
+                    }", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+        }
+
+        [Fact]
+        public void AddFromAssemblyIsReplacedByDefault()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                    namespace Temp {
+                        public class Startup2 {
+                            void Configure(IServiceCollection collection) {
+                                collection.AddFromAssembly(typeof(Startup2));
+                            }
+                        }
+                    }"));
+
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup2
+    {
+        void Configure(IServiceCollection collection)
+        {
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
+        }
+
+        [Fact]
+        public void DiagnosticsStillFunctionEvenIfReplacementNeverHappens()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                public interface IProviderA
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB
+                {
+                    decimal GetValue();
+                }
+
+                [ImplementationOf(typeof(IProviderA), LifecycleKind.Singleton)]
+                public class ProviderA : IProviderB
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }"));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.True(context.Diagnostics.Any());
+        }
+
+        [Fact]
+        public void RegistersAllInterfacesIfServiceTypeIsNotDefined()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                public interface IProviderA
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB
+                {
+                    decimal GetValue2();
+                }
+
+                [ImplementationOf( Lifecycle = LifecycleKind.Singleton )]
+                class ProviderA : IProviderB, IProviderA
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+
+                    public decimal GetValue2()
+                    {
+                        return 9000.99M;
+                    }
+                }"));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+            services.AddTransient(typeof (IProviderB), typeof (ProviderA));
+            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+        }
+
+        [Fact]
+        public void RegistersAllInterfacesAndTheClassIfTheClassIsPublicIfServiceTypeIsNotDefined()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(@"
+                public interface IProviderA
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB
+                {
+                    decimal GetValue2();
+                }
+
+                [ImplementationOf( Lifecycle = LifecycleKind.Singleton )]
+                public class ProviderA : IProviderB, IProviderA
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+
+                    public decimal GetValue2()
+                    {
+                        return 9000.99M;
+                    }
+                }"));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+            services.AddTransient(typeof (IProviderB), typeof (ProviderA));
+            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+            services.AddTransient(typeof (ProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
         }
     }
 }

@@ -10,8 +10,7 @@
         "Microsoft.AspNet.StaticFiles": "1.0.0-*",
         "Microsoft.Framework.ConfigurationModel.Json": "1.0.0-*",
         "Microsoft.VisualStudio.Web.BrowserLink.Loader": "14.0-*",
-        "Blacklite.Framework.DI": "",
-        "System.Text.Encoding": "4.0.20.0"
+        "Blacklite.Framework.DI": ""
     },
     "compilationOptions": {
         "languageVersion": "experimental"
@@ -20,12 +19,15 @@
         "web": "Microsoft.AspNet.Hosting --server Microsoft.AspNet.Server.WebListener --server.urls http://localhost:5000"
     },
     "frameworks": {
+        "aspnet50": {
+            "System.Text.Encoding": "4.0.10.0"
+        },
         "aspnetcore50": {
             "System.Runtime": "4.0.20.0",
             "System.Threading": "4.0.0.0",
             "System.Threading.Tasks": "4.0.10.0",
             "System.IO": "4.0.0.0",
-            "System.Text.Encoding": "4.0.20.0",
+            "System.Text.Encoding": "4.0.10.0",
             "System.Linq": "4.0.0.0",
             "System.Linq.Expressions": "4.0.0.0"
         }
