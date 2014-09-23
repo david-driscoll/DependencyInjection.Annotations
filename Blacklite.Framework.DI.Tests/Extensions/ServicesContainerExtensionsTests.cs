@@ -18,7 +18,7 @@ namespace Blacklite.Framework.DI.Tests
 
             collection.AddAssembly(this);
 
-            Assert.Equal(collection.Count(), 8);
+            Assert.Equal(collection.Count(), 14);
         }
 
         [Fact]
@@ -28,7 +28,7 @@ namespace Blacklite.Framework.DI.Tests
 
             collection.AddAssembly(typeof(ServicesContainerExtensionsTests));
 
-            Assert.Equal(collection.Count(), 8);
+            Assert.Equal(collection.Count(), 14);
         }
 
         [Fact]
@@ -42,7 +42,7 @@ namespace Blacklite.Framework.DI.Tests
             collection.AddAssembly(typeof(ServicesContainerExtensionsTests).Assembly);
 #endif
 
-            Assert.Equal(collection.Count(), 8);
+            Assert.Equal(collection.Count(), 14);
         }
 
         private class ServiceDescriptorEqualityComparer : IEqualityComparer<IServiceDescriptor>
@@ -186,10 +186,81 @@ namespace Blacklite.Framework.DI.Tests
             {
                 ServiceType = typeof(IOpenProviderA<>),
                 ImplementationType = typeof(OpenProviderA<>),
+                Lifecycle = LifecycleKind.Singleton
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+        }
+
+        public void ServiceCollectionContainsOpenPublicClassesWhenUsedGenerically()
+        {
+            var collection = new ServiceCollection();
+            var eqalityComparer = new ServiceDescriptorEqualityComparer();
+
+            collection.AddAssembly(this);
+
+            var descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderB<>),
+                ImplementationType = typeof(OpenProviderBC<>),
                 Lifecycle = LifecycleKind.Transient
             };
 
             Assert.Contains(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderC<>),
+                ImplementationType = typeof(OpenProviderBC<>),
+                Lifecycle = LifecycleKind.Transient
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(OpenProviderBC<>),
+                ImplementationType = typeof(OpenProviderBC<>),
+                Lifecycle = LifecycleKind.Transient
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderD<>),
+                ImplementationType = typeof(OpenProviderDE<>),
+                Lifecycle = LifecycleKind.Scoped
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderE<>),
+                ImplementationType = typeof(OpenProviderDE<>),
+                Lifecycle = LifecycleKind.Scoped
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderF<>),
+                ImplementationType = typeof(OpenProviderDE<>),
+                Lifecycle = LifecycleKind.Scoped
+            };
+
+            Assert.DoesNotContain(descriptor, collection, eqalityComparer);
+
+            descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(OpenProviderDE<>),
+                ImplementationType = typeof(OpenProviderDE<>),
+                Lifecycle = LifecycleKind.Scoped
+            };
+
+            Assert.DoesNotContain(descriptor, collection, eqalityComparer);
         }
     }
 }

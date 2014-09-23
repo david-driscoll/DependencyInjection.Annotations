@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Framework.DependencyInjection;
+using System;
 
 namespace Blacklite.Framework.DI.Tests.Fixtures 
 {
@@ -6,7 +7,7 @@ namespace Blacklite.Framework.DI.Tests.Fixtures
     {
     }
 
-    [ServiceDescriptor(typeof(IOpenProviderA<>))]
+    [ServiceDescriptor(typeof(IOpenProviderA<>), Lifecycle = LifecycleKind.Singleton)]
     public class OpenProviderA<T> : IOpenProviderA<T>
     {
     }

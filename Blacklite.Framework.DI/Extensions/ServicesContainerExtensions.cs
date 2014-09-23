@@ -34,6 +34,15 @@ namespace Blacklite.Framework.DI
             return collection.AddAssembly(assembly, compile);
         }
 
+        private static IEnumerable<Type> GetAllBaseTypes(Type type)
+        {
+            while (type.BaseType != null)
+            {
+                yield return type;
+                type = type.BaseType;
+            }
+        }
+
         public static IServiceCollection AddAssembly(this IServiceCollection collection, Assembly assembly, bool compile = true)
         {
             if (collection == null)
@@ -44,7 +53,7 @@ namespace Blacklite.Framework.DI
             var services = assembly.GetTypes()
                 .Select(x => new
                 {
-                    Type = x,
+                    ImplementationType = x,
 #if ASPNETCORE50
                     Attribute = x.GetTypeInfo().GetCustomAttribute<ServiceDescriptorAttribute>(true)
 #else
@@ -55,13 +64,14 @@ namespace Blacklite.Framework.DI
 
             foreach (var service in services)
             {
-                var implementationType = service.Type;
+                var implementationType = service.ImplementationType;
                 IEnumerable<Type> serviceTypes = null;
                 if (service.Attribute.ServiceType == null)
                 {
                     serviceTypes = implementationType.GetInterfaces();
                     if (implementationType.IsPublic)
                     {
+                        // TODO:  Should this include all base types?  Should it be the lowest base type (HttpContext for example)? 
                         serviceTypes = serviceTypes.Concat(new[] { implementationType });
                     }
 
@@ -71,7 +81,7 @@ namespace Blacklite.Framework.DI
 
                         serviceTypes = serviceTypes.Where(type => parameters
                             .Join(type.GetGenericArguments(), x => x.Name, x => x.Name, (x, y) => true).Count() == parameters.Count())
-                        .Select(x => x.GetGenericTypeDefinition());
+                            .Select(x => x.GetGenericTypeDefinition());
                     }
                 }
                 else
@@ -85,9 +95,18 @@ namespace Blacklite.Framework.DI
 
                 foreach (var serviceType in serviceTypes)
                 {
-                    if (serviceType.IsAssignableFrom(implementationType))
+
+                    if (service.Attribute.ServiceType == null || // We'ere registering everything, and we've already filtered inapplicable types
+                        serviceType.IsAssignableFrom(implementationType) || // Handle the most basic registration
+                        service.ImplementationType.GetInterfaces() // Handle the open implementation....
+                            .Concat(GetAllBaseTypes(service.ImplementationType))
+                            .Select(z => z.GetGenericTypeDefinition())
+                            .Any(z => z == serviceType)
+                        )
                     {
                         var lifecycle = service.Attribute.Lifecycle;
+
+                        Console.WriteLine("{0}, {1}", implementationType.FullName, serviceType.FullName);
 
                         collection.Add(new ServiceDescriptor()
                         {
@@ -104,6 +123,8 @@ namespace Blacklite.Framework.DI
                         );
                     }
                 }
+                Console.WriteLine("----------");
+
             }
 
             return collection;
