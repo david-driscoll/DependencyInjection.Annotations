@@ -55,29 +55,43 @@ namespace Blacklite.Framework.DI
 
             foreach (var service in services)
             {
+                var implementationType = service.Type;
                 IEnumerable<Type> serviceTypes = null;
                 if (service.Attribute.ServiceType == null)
                 {
-                    serviceTypes = service.Type.GetInterfaces();
-                    if (service.Type.IsPublic)
+                    serviceTypes = implementationType.GetInterfaces();
+                    if (implementationType.IsPublic)
                     {
-                        serviceTypes = serviceTypes.Concat(new[] { service.Type });
+                        serviceTypes = serviceTypes.Concat(new[] { implementationType });
+                    }
+
+                    if (implementationType.ContainsGenericParameters)
+                    {
+                        var parameters = implementationType.GetGenericArguments();
+
+                        serviceTypes = serviceTypes.Where(type => parameters
+                            .Join(type.GetGenericArguments(), x => x.Name, x => x.Name, (x, y) => true).Count() == parameters.Count())
+                        .Select(x => x.GetGenericTypeDefinition());
                     }
                 }
                 else
                 {
+                    if (service.Attribute.ServiceType.IsGenericTypeDefinition)
+                    {
+                        implementationType = implementationType.GetGenericTypeDefinition();
+                    }
                     serviceTypes = new[] { service.Attribute.ServiceType };
                 }
 
                 foreach (var serviceType in serviceTypes)
                 {
-                    if (serviceType.IsAssignableFrom(service.Type))
+                    if (serviceType.IsAssignableFrom(implementationType))
                     {
                         var lifecycle = service.Attribute.Lifecycle;
 
                         collection.Add(new ServiceDescriptor()
                         {
-                            ImplementationType = service.Type,
+                            ImplementationType = implementationType,
                             ServiceType = serviceType,
                             Lifecycle = service.Attribute.Lifecycle
                         });
@@ -86,7 +100,7 @@ namespace Blacklite.Framework.DI
                     {
                         throw new InvalidCastException(string.Format("Service Type '{0}' is not assignable from Implementation Type '{1}'.",
                             serviceType.FullName,
-                            service.Type.FullName)
+                            implementationType.FullName)
                         );
                     }
                 }

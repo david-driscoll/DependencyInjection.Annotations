@@ -173,5 +173,23 @@ namespace Blacklite.Framework.DI.Tests
 
             Assert.Contains(descriptor, collection, eqalityComparer);
         }
+
+        [Fact]
+        public void ServiceCollectionIncludsOpenProviderA()
+        {
+            var collection = new ServiceCollection();
+            var eqalityComparer = new ServiceDescriptorEqualityComparer();
+
+            collection.AddAssembly(this);
+
+            var descriptor = new ServiceDescriptor()
+            {
+                ServiceType = typeof(IOpenProviderA<>),
+                ImplementationType = typeof(OpenProviderA<>),
+                Lifecycle = LifecycleKind.Transient
+            };
+
+            Assert.Contains(descriptor, collection, eqalityComparer);
+        }
     }
 }
