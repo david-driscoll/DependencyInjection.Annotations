@@ -4,9 +4,9 @@ using System;
 namespace Blacklite.Framework.DI
 {
     [AttributeUsage(AttributeTargets.Class)]
-    public class ImplementationOfAttribute(Type serviceType = null, LifecycleKind lifecycle = LifecycleKind.Transient) : Attribute
+    public class ServiceDescriptorAttribute(Type serviceType = null) : Attribute
     {
         public Type ServiceType { get; set; } = serviceType;
-        public LifecycleKind Lifecycle { get; set; } = lifecycle;
+        public LifecycleKind Lifecycle { get; set; } = LifecycleKind.Transient;
     }
 }

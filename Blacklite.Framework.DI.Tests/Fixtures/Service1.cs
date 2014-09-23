@@ -1,7 +1,7 @@
 ﻿using Microsoft.Framework.DependencyInjection;
 using System;
 
-namespace Blacklite.Framework.DI.Tests.Web
+namespace Blacklite.Framework.DI.Tests.Fixtures
 {
     public interface IService1
     {

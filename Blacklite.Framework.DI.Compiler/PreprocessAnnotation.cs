@@ -25,20 +25,20 @@ namespace Blacklite.Framework.DI.Compiler
 
     public class PreprocessAnnotation : ICompileModule
     {
-        private IEnumerable<Container<InvocationExpressionSyntax, IMethodSymbol>> GetAddFromAssemblyMethodCall(SyntaxTree syntaxTree, SemanticModel model)
+        private IEnumerable<Container<InvocationExpressionSyntax, IMethodSymbol>> GetAddAssemblyMethodCall(SyntaxTree syntaxTree, SemanticModel model)
         {
             // Find all classes that have our attribute.
-            var addFromAssemblyExpressions = syntaxTree
+            var AddAssemblyExpressions = syntaxTree
                        .GetRoot()
                        .DescendantNodes()
                        .OfType<MemberAccessExpressionSyntax>()
-                       .Where(declaration => declaration.Name.ToString().Contains("AddFromAssembly"))
+                       .Where(declaration => declaration.Name.ToString().Contains("AddAssembly"))
                        .Where(declaration => declaration.Parent is InvocationExpressionSyntax)
                        .Where(declaration => model.GetSymbolInfo(declaration.Parent).Symbol is IMethodSymbol)
                        .Select(declaration => new Container<InvocationExpressionSyntax, IMethodSymbol>((InvocationExpressionSyntax)declaration.Parent, (IMethodSymbol)model.GetSymbolInfo(declaration.Parent).Symbol));
 
             // Each return the container for each class
-            foreach (var expression in addFromAssemblyExpressions)
+            foreach (var expression in AddAssemblyExpressions)
             {
                 // 1 Argument means the default parameter was omitted
                 // We will replace it, if it's valid
@@ -52,8 +52,8 @@ namespace Blacklite.Framework.DI.Compiler
                         parent = parent.Parent;
                     }
                     classSyntax = parent as ClassDeclarationSyntax;
-                    Console.WriteLine(classSyntax.Identifier);
-                    Console.WriteLine(expression.Declaration.ArgumentList.Arguments[0].ToString());
+                    //Console.WriteLine(classSyntax.Identifier);
+                    //Console.WriteLine(expression.Declaration.ArgumentList.Arguments[0].ToString());
 
                     var replace = false;
 
@@ -90,7 +90,7 @@ namespace Blacklite.Framework.DI.Compiler
                        .OfType<ClassDeclarationSyntax>()
                        .Select(declaration => new Container<ClassDeclarationSyntax, INamedTypeSymbol>(declaration, model.GetDeclaredSymbol(declaration)))
                        .Where(x => x.Symbol.GetAttributes()
-                           .Any(z => z.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute")));
+                           .Any(z => z.AttributeClass.Name.ToString().Contains("ServiceDescriptorAttribute")));
 
             // Each return the container for each class
             foreach (var container in classesWithAttribute)
@@ -140,10 +140,10 @@ namespace Blacklite.Framework.DI.Compiler
 
         public Func<string, IEnumerable<StatementSyntax>> GetStatement(IBeforeCompileContext context, INamedTypeSymbol symbol, ClassDeclarationSyntax declaration)
         {
-            var attributeSymbol = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ImplementationOfAttribute"));
+            var attributeSymbol = symbol.GetAttributes().Single(x => x.AttributeClass.Name.ToString().Contains("ServiceDescriptorAttribute"));
             var attributeDeclaration = declaration.AttributeLists
                 .SelectMany(z => z.Attributes)
-                .Single(z => z.Name.ToString().Contains("ImplementationOf"));
+                .Single(z => z.Name.ToString().Contains("ServiceDescriptor"));
 
             var implementationType = symbol.ToDisplayString();
             var implementationQualifiedName = BuildQualifiedName(implementationType);
@@ -159,7 +159,7 @@ namespace Blacklite.Framework.DI.Compiler
 
             if (attributeSymbol.ConstructorArguments.Count() > 0 && attributeSymbol.ConstructorArguments[0].Value != null)
             {
-                Console.WriteLine(attributeSymbol.ConstructorArguments[0].Value);
+                //Console.WriteLine(attributeSymbol.ConstructorArguments[0].Value);
                 serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
                 serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType) };
             }
@@ -204,8 +204,13 @@ namespace Blacklite.Framework.DI.Compiler
                 );
             }
 
-            // Determine the lifecycle that was given.
-            var lifecycle = GetLifecycle((int)attributeSymbol.ConstructorArguments[1].Value);
+            var hasLifecycle = attributeSymbol.NamedArguments.Any(z => z.Key == "Lifecycle");
+            var lifecycle = "Transient";
+
+            if (hasLifecycle)
+            {
+                lifecycle = GetLifecycle((int)attributeSymbol.NamedArguments.Single(z => z.Key == "Lifecycle").Value.Value);
+            }
 
             // Build the Statement
             return GetCollectionExpressionStatement(lifecycle, serviceQualifiedNames, implementationQualifiedName);
@@ -213,7 +218,7 @@ namespace Blacklite.Framework.DI.Compiler
 
         public string GetLifecycle(int enumValue)
         {
-            string lifecycle;
+            string lifecycle = "Transient";
             switch (enumValue)
             {
                 case 1:
@@ -221,9 +226,6 @@ namespace Blacklite.Framework.DI.Compiler
                     break;
                 case 0:
                     lifecycle = "Singleton";
-                    break;
-                default:
-                    lifecycle = "Transient";
                     break;
             }
 
@@ -267,9 +269,9 @@ namespace Blacklite.Framework.DI.Compiler
                 });
 
 
-            Console.WriteLine(string.Join(", ", context.CSharpCompilation.GetDiagnostics().Select(z => z.ToString())));
+            //Console.WriteLine(string.Join(", ", context.CSharpCompilation.GetDiagnostics().Select(z => z.ToString())));
             var addAssemblyMethodCalls = containers
-                .SelectMany(ctx => GetAddFromAssemblyMethodCall(ctx.SyntaxTree, ctx.Model));
+                .SelectMany(ctx => GetAddAssemblyMethodCall(ctx.SyntaxTree, ctx.Model));
 
             // Build the registration statements out of the containers.
             var nodes = GetStatements(context, containers.SelectMany(ctx => GetClassesWithImplementationAttribute(ctx.SyntaxTree, ctx.Model)))
@@ -280,7 +282,7 @@ namespace Blacklite.Framework.DI.Compiler
             foreach (var method in addAssemblyMethodCalls)
             {
                 var identifierName = ((MemberAccessExpressionSyntax)method.Declaration.Expression).Expression.ToString();
-                Console.WriteLine(identifierName);
+                //Console.WriteLine(identifierName);
 
                 var methodNodes = nodes.SelectMany(x => x(identifierName));
 
@@ -295,51 +297,6 @@ namespace Blacklite.Framework.DI.Compiler
                 newCompilation = newCompilation.ReplaceSyntaxTree(oldSyntaxTree, newSyntaxTree);
             }
 
-
-
-            /*// Build our new extension method.
-            // This baby can technically be called as an extension once vNext compiles this code
-            // But currently the best way for (tooling) is to call this methid via reflection.
-            var @method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IServiceCollection"), "AddImplementations")
-                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
-                .AddParameterListParameters(
-                    SyntaxFactory.Parameter(
-                        default(SyntaxList<AttributeListSyntax>),
-                        default(SyntaxTokenList),
-                        SyntaxFactory.IdentifierName("IServiceCollection"),
-                        SyntaxFactory.Identifier("collection"),
-                        null
-                    ).AddModifiers(SyntaxFactory.Token(SyntaxKind.ThisKeyword))
-                )
-                    // Add our statements
-                    .AddBodyStatements(nodes.ToArray())
-                    // Our method returns the IServiceCollection instance
-                    .AddBodyStatements(SyntaxFactory.ReturnStatement(SyntaxFactory.IdentifierName("collection")));
-
-            // Build our extension class, it's static and public and contains our method
-            var @class = SyntaxFactory.ClassDeclaration("ServicesContainerExtensions")
-                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
-                .AddMembers(@method);
-
-            // Build a namespace to house our method in.
-            var @namespace = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName("__generated"))
-                .AddMembers(@class)
-                .NormalizeWhitespace();
-
-            // Create a new compliation unit.
-            // This references the Dependency injection namepsace for the IServiceCollection interface
-            var newCompilationUnit = SyntaxFactory.CompilationUnit()
-                .AddUsings(SyntaxFactory.UsingDirective(BuildQualifiedName("Microsoft.Framework.DependencyInjection")))
-                .AddMembers(@namespace)
-                .NormalizeWhitespace();
-
-            // Generate the syntax tree
-            var newSyntaxTree = SyntaxFactory.SyntaxTree(newCompilationUnit, context.CSharpCompilation.SyntaxTrees[0].Options);
-
-            // Get a new C# compliation, with our new syntax tree
-            var newCompilation = context.CSharpCompilation.AddSyntaxTrees(newSyntaxTree);*/
-
-            // Replace the compliation with our new one.
             context.CSharpCompilation = newCompilation;
         }
 

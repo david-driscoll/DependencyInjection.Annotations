@@ -24,7 +24,7 @@ namespace Blacklite.Framework.DI.Tests.Web
             // Set up application services
             app.UseServices(services =>
             {
-                services.AddFromAssembly(typeof(Startup));
+                services.AddAssembly(typeof(Startup));
 
                 // Add EF services to the services container
                 services.AddEntityFramework()

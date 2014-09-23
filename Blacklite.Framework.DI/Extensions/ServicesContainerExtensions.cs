@@ -1,5 +1,4 @@
 using Microsoft.Framework.DependencyInjection;
-using Microsoft.Framework.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,19 +8,17 @@ namespace Blacklite.Framework.DI
 {
     public static class ServicesContainerExtensions
     {
-        internal const string CompileTimeTypeName = "__generated.ServicesContainerExtensions";
-
-        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, object context, bool compile = true)
+        public static IServiceCollection AddAssembly(this IServiceCollection collection, object context, bool compile = true)
         {
             if (context == null)
             {
                 throw new ArgumentNullException("context");
             }
-            
-            return collection.AddFromAssembly(context.GetType(), compile);
+
+            return collection.AddAssembly(context.GetType(), compile);
         }
 
-        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, Type type, bool compile = true)
+        public static IServiceCollection AddAssembly(this IServiceCollection collection, Type type, bool compile = true)
         {
             if (collection == null)
             {
@@ -29,13 +26,15 @@ namespace Blacklite.Framework.DI
             }
 
 #if ASPNETCORE50
-            return collection.AddFromAssembly(type.GetTypeInfo().Assembly, compile);
+            var assembly = type.GetTypeInfo().Assembly;
 #else
-            return collection.AddFromAssembly(type.Assembly, compile);
+            var assembly = type.Assembly;
 #endif
+
+            return collection.AddAssembly(assembly, compile);
         }
 
-        public static IServiceCollection AddFromAssembly(this IServiceCollection collection, Assembly assembly, bool compile = true)
+        public static IServiceCollection AddAssembly(this IServiceCollection collection, Assembly assembly, bool compile = true)
         {
             if (collection == null)
             {
@@ -47,38 +46,49 @@ namespace Blacklite.Framework.DI
                 {
                     Type = x,
 #if ASPNETCORE50
-                    Attribute = x.GetTypeInfo().GetCustomAttribute<ImplementationOfAttribute>(true)
+                    Attribute = x.GetTypeInfo().GetCustomAttribute<ServiceDescriptorAttribute>(true)
 #else
-                    Attribute = x.GetCustomAttribute<ImplementationOfAttribute>(true)
+                    Attribute = x.GetCustomAttribute<ServiceDescriptorAttribute>(true)
 #endif
                 })
                 .Where(x => x.Attribute != null);
 
             foreach (var service in services)
             {
-                if (service.Attribute.ServiceType.IsAssignableFrom(service.Type))
+                IEnumerable<Type> serviceTypes = null;
+                if (service.Attribute.ServiceType == null)
                 {
-                    switch (service.Attribute.Lifecycle)
+                    serviceTypes = service.Type.GetInterfaces();
+                    if (service.Type.IsPublic)
                     {
-                        case LifecycleKind.Singleton:
-                            collection.AddSingleton(service.Attribute.ServiceType, service.Type);
-                            break;
-
-                        case LifecycleKind.Scoped:
-                            collection.AddScoped(service.Attribute.ServiceType, service.Type);
-                            break;
-
-                        case LifecycleKind.Transient:
-                        default:
-                            collection.AddTransient(service.Attribute.ServiceType, service.Type);
-                            break;
+                        serviceTypes = serviceTypes.Concat(new[] { service.Type });
                     }
                 }
                 else
                 {
-                    throw new InvalidCastException(string.Format("Service Type '{0}' is not assignable from Implementation Type '{1}'.",
-                        service.Attribute.ServiceType.FullName,
-                        service.Type.FullName));
+                    serviceTypes = new[] { service.Attribute.ServiceType };
+                }
+
+                foreach (var serviceType in serviceTypes)
+                {
+                    if (serviceType.IsAssignableFrom(service.Type))
+                    {
+                        var lifecycle = service.Attribute.Lifecycle;
+
+                        collection.Add(new ServiceDescriptor()
+                        {
+                            ImplementationType = service.Type,
+                            ServiceType = serviceType,
+                            Lifecycle = service.Attribute.Lifecycle
+                        });
+                    }
+                    else
+                    {
+                        throw new InvalidCastException(string.Format("Service Type '{0}' is not assignable from Implementation Type '{1}'.",
+                            serviceType.FullName,
+                            service.Type.FullName)
+                        );
+                    }
                 }
             }
 
