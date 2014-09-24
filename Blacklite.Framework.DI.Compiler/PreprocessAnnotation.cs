@@ -12,16 +12,10 @@ using Microsoft.Framework.Runtime;
 
 namespace Blacklite.Framework.DI.Compiler
 {
-    public class Container<TDeclaration, TSymbol>
+    public class Container<TDeclaration, TSymbol>(TDeclaration declaration, TSymbol symbol)
     {
-        public Container(TDeclaration declaration, TSymbol symbol)
-        {
-            Declaration = declaration;
-            Symbol = symbol;
-        }
-
-        public TDeclaration Declaration { get; private set; }
-        public TSymbol Symbol { get; private set; }
+        public TDeclaration Declaration { get; } = declaration;
+        public TSymbol Symbol { get; } = symbol;
     }
 
     public class PreprocessAnnotation : ICompileModule

@@ -18,7 +18,7 @@ namespace Blacklite.Framework.DI.Tests.Web.Controllers
 
         public IActionResult About()
         {
-            ViewBag.Message = "Your application description page. " + _service1.Value;
+            ViewBag.Message = "Your application "+ _openProviderB.ItemA + " description " + _openProviderC.ItemB + " page. " + _service1.Value;
 
             return View();
         }
