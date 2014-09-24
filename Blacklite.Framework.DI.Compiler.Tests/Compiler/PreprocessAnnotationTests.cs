@@ -72,6 +72,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -118,6 +119,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -166,6 +168,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -214,6 +217,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -261,6 +265,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -350,6 +355,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -426,6 +432,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -470,6 +477,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
 
@@ -508,6 +516,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
 
@@ -543,6 +552,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.Last().GetText().ToString());
 
@@ -632,6 +642,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -690,6 +701,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             var unit = new PreprocessAnnotation();
 
             unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
 
             //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
 
@@ -702,6 +714,295 @@ namespace Blacklite.Framework.DI.Compiler.Tests
             services.AddSingleton(typeof (IProviderB), typeof (ProviderA));
             services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
             services.AddSingleton(typeof (ProviderA), typeof (ProviderA));
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+        }
+
+        [Fact]
+        public void UnderstandsOpenEverything()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderA<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
+                public class ProviderA<T> : IProviderA<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderB1<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderB1<>))]
+                public class ProviderB1<T> : IProviderB1<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderB<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderB<T>), Lifecycle = LifecycleKind.Transient)]
+                public class ProviderB<T> : IProviderB<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderC<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderC<>), Lifecycle = LifecycleKind.Scoped)]
+                public class ProviderC<T> : IProviderC<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+            services.AddSingleton(typeof (IProviderA<>), typeof (ProviderA<>));
+            services.AddTransient(typeof (IProviderB1<>), typeof (ProviderB1<>));
+            services.AddTransient(typeof (IProviderB<>), typeof (ProviderB<>));
+            services.AddScoped(typeof (IProviderC<>), typeof (ProviderC<>));
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+        }
+
+        [Fact]
+        public void ReportsOpenDiagnostics()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderA<T>
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
+                public class ProviderA<T> : IProviderB<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
+
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.True(context.Diagnostics.Any());
+        }
+
+        [Fact]
+        public void OpenDiagnosticsStillFunctionEvenIfReplacementNeverHappens()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderA<T>
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB<T>
+                {
+                    decimal GetValue();
+                }
+
+                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
+                public class ProviderA<T> : IProviderB<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.True(context.Diagnostics.Any());
+        }
+
+        [Fact]
+        public void RegistersAllInterfacesIfOpenServiceTypeIsNotDefined()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderA<T>
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB<T>
+                {
+                    decimal GetValue2();
+                }
+
+                [ServiceDescriptor(Lifecycle = LifecycleKind.Scoped)]
+                class ProviderA<T> : IProviderB<T>, IProviderA<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+
+                    public decimal GetValue2()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+            services.AddScoped(typeof (IProviderB<>), typeof (ProviderA<>));
+            services.AddScoped(typeof (IProviderA<>), typeof (ProviderA<>));
+        }
+
+        public static int Main()
+        {
+            return 0;
+        }
+    }
+}", context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+        }
+
+        [Fact]
+        public void RegistersAllInterfacesAndTheClassIfTheClassIsPublicIfOpenServiceTypeIsNotDefined()
+        {
+            var compilation = GetCompilation()
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
+                public interface IProviderA<T>
+                {
+                    decimal GetValue();
+                }
+
+                public interface IProviderB<T>
+                {
+                    decimal GetValue2();
+                }
+
+                [ServiceDescriptor( Lifecycle = LifecycleKind.Singleton )]
+                public class ProviderA<T> : IProviderB<T>, IProviderA<T>
+                {
+                    public decimal GetValue()
+                    {
+                        return 9000.99M;
+                    }
+
+                    public decimal GetValue2()
+                    {
+                        return 9000.99M;
+                    }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
+
+            var context = new BeforeCompileContext()
+            {
+                CSharpCompilation = compilation
+            };
+
+            var unit = new PreprocessAnnotation();
+
+            unit.BeforeCompile((IBeforeCompileContext)context);
+            Assert.False(context.Diagnostics.Any());
+
+            //Console.WriteLine(context.CSharpCompilation.SyntaxTrees.First(x => x.GetText().ToString().Contains("class Startup")).GetText().ToString());
+
+            Assert.Equal(@"namespace Temp
+{
+    public class Startup
+    {
+        void Configure(IServiceCollection services)
+        {
+            services.AddSingleton(typeof (IProviderB<>), typeof (ProviderA<>));
+            services.AddSingleton(typeof (IProviderA<>), typeof (ProviderA<>));
+            services.AddSingleton(typeof (ProviderA<>), typeof (ProviderA<>));
         }
 
         public static int Main()
