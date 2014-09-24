@@ -14,7 +14,8 @@ namespace Blacklite.Framework.DI.Compiler
 {
     public class Container<TDeclaration, TSymbol>
     {
-        public Container(TDeclaration declaration, TSymbol symbol) {
+        public Container(TDeclaration declaration, TSymbol symbol)
+        {
             Declaration = declaration;
             Symbol = symbol;
         }
@@ -52,8 +53,6 @@ namespace Blacklite.Framework.DI.Compiler
                         parent = parent.Parent;
                     }
                     classSyntax = parent as ClassDeclarationSyntax;
-                    Console.WriteLine(classSyntax.Identifier);
-                    Console.WriteLine(expression.Declaration.ArgumentList.Arguments[0].ToString());
 
                     var replace = false;
 
@@ -74,7 +73,6 @@ namespace Blacklite.Framework.DI.Compiler
 
                     if (replace)
                     {
-                        //Console.WriteLine(expression.Declaration.ArgumentList.Arguments[1].ToString());
                         yield return expression;
                     }
                 }
@@ -99,14 +97,36 @@ namespace Blacklite.Framework.DI.Compiler
             }
         }
 
-        private NameSyntax BuildQualifiedName(string type)
+        private NameSyntax BuildQualifiedName(string type, int genericTypeParamCount)
         {
             // Create a qualified name for every piece of the type.
             // If you don't do this... bad things happen.
             NameSyntax nameSyntax;
             var parts = type.Split('.');
 
-            var identifiers = parts.Select(SyntaxFactory.IdentifierName);
+            var identifiers = parts.Select(SyntaxFactory.IdentifierName).Cast<SimpleNameSyntax>();
+
+            if (genericTypeParamCount > 0)
+            {
+                var name = parts.Last();
+                name = name.Substring(0, name.IndexOf("<"));
+
+                var ommitedTypeArguments = new List<TypeSyntax>();
+                for (var i = 0; i < genericTypeParamCount; i++)
+                {
+                    ommitedTypeArguments.Add(SyntaxFactory.OmittedTypeArgument());
+                }
+
+                identifiers = identifiers.Take(parts.Count() - 1).Concat(new[] {
+                    SyntaxFactory.GenericName(
+                        SyntaxFactory.Identifier(name), 
+                        SyntaxFactory.TypeArgumentList(
+                            SyntaxFactory.SeparatedList(ommitedTypeArguments)
+                        )
+                    )
+                });
+            }
+
             if (identifiers.Count() > 1)
             {
                 QualifiedNameSyntax qns = SyntaxFactory.QualifiedName(
@@ -126,7 +146,6 @@ namespace Blacklite.Framework.DI.Compiler
                 nameSyntax = identifiers.Single();
             }
 
-
             return nameSyntax;
         }
 
@@ -145,23 +164,26 @@ namespace Blacklite.Framework.DI.Compiler
                 .SelectMany(z => z.Attributes)
                 .Single(z => z.Name.ToString().Contains("ServiceDescriptor"));
 
-            var implementationType = symbol.ToDisplayString();
-            var implementationQualifiedName = BuildQualifiedName(implementationType);
+            var implementationType = symbol.ConstructUnboundGenericType().ToDisplayString();
+            var implementationQualifiedName = BuildQualifiedName(implementationType, symbol.TypeParameters.Count());
 
             string serviceType = null;
             IEnumerable<NameSyntax> serviceQualifiedNames = symbol.AllInterfaces
-                .Select(z => BuildQualifiedName(z.ToDisplayString()));
+                .Select(z => BuildQualifiedName(z.ConstructUnboundGenericType().ToDisplayString(), z.TypeParameters.Count()));
 
             if (declaration.Modifiers.Any(z => z.RawKind == (int)SyntaxKind.PublicKeyword))
             {
+                // TODO:  Should this include all base types?  Should it be the lowest base type (HttpContext for example)? 
                 serviceQualifiedNames = serviceQualifiedNames.Union(new NameSyntax[] { implementationQualifiedName });
             }
 
             if (attributeSymbol.ConstructorArguments.Count() > 0 && attributeSymbol.ConstructorArguments[0].Value != null)
             {
-                Console.WriteLine(attributeSymbol.ConstructorArguments[0].Value);
-                serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
-                serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType) };
+                var serviceNameTypedSymbol = (INamedTypeSymbol)attributeSymbol.ConstructorArguments[0].Value;
+                if (serviceNameTypedSymbol == null)
+                    throw new Exception("Could not infer service symbol");
+                serviceType = serviceNameTypedSymbol.ConstructUnboundGenericType().ToString();
+                serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType, serviceNameTypedSymbol.TypeParameters.Count()) };
             }
 
 
@@ -176,7 +198,7 @@ namespace Blacklite.Framework.DI.Compiler
             // TODO: Enforce implementation is assignable to service
             // Diagnostic error?
             var potentialBaseTypes = baseTypes.Concat(
-                symbol.AllInterfaces.Select(z => z.ToDisplayString())
+                symbol.AllInterfaces.Select(z => z.ConstructUnboundGenericType().ToDisplayString())
             );
 
             // This is where some of the power comes out.
@@ -204,8 +226,13 @@ namespace Blacklite.Framework.DI.Compiler
                 );
             }
 
-            // Determine the lifecycle that was given.
-            var lifecycle = GetLifecycle((int)attributeSymbol.ConstructorArguments[1].Value);
+            var hasLifecycle = attributeSymbol.NamedArguments.Any(z => z.Key == "Lifecycle");
+            var lifecycle = "Transient";
+
+            if (hasLifecycle)
+            {
+                lifecycle = GetLifecycle((int)attributeSymbol.NamedArguments.Single(z => z.Key == "Lifecycle").Value.Value);
+            }
 
             // Build the Statement
             return GetCollectionExpressionStatement(lifecycle, serviceQualifiedNames, implementationQualifiedName);
@@ -213,7 +240,7 @@ namespace Blacklite.Framework.DI.Compiler
 
         public string GetLifecycle(int enumValue)
         {
-            string lifecycle;
+            string lifecycle = "Transient";
             switch (enumValue)
             {
                 case 1:
@@ -221,9 +248,6 @@ namespace Blacklite.Framework.DI.Compiler
                     break;
                 case 0:
                     lifecycle = "Singleton";
-                    break;
-                default:
-                    lifecycle = "Transient";
                     break;
             }
 
@@ -267,7 +291,6 @@ namespace Blacklite.Framework.DI.Compiler
                 });
 
 
-            Console.WriteLine(string.Join(", ", context.CSharpCompilation.GetDiagnostics().Select(z => z.ToString())));
             var addAssemblyMethodCalls = containers
                 .SelectMany(ctx => GetAddAssemblyMethodCall(ctx.SyntaxTree, ctx.Model));
 
@@ -280,7 +303,6 @@ namespace Blacklite.Framework.DI.Compiler
             foreach (var method in addAssemblyMethodCalls)
             {
                 var identifierName = ((MemberAccessExpressionSyntax)method.Declaration.Expression).Expression.ToString();
-                Console.WriteLine(identifierName);
 
                 var methodNodes = nodes.SelectMany(x => x(identifierName));
 
@@ -295,51 +317,6 @@ namespace Blacklite.Framework.DI.Compiler
                 newCompilation = newCompilation.ReplaceSyntaxTree(oldSyntaxTree, newSyntaxTree);
             }
 
-
-
-            /*// Build our new extension method.
-            // This baby can technically be called as an extension once vNext compiles this code
-            // But currently the best way for (tooling) is to call this methid via reflection.
-            var @method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IServiceCollection"), "AddImplementations")
-                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
-                .AddParameterListParameters(
-                    SyntaxFactory.Parameter(
-                        default(SyntaxList<AttributeListSyntax>),
-                        default(SyntaxTokenList),
-                        SyntaxFactory.IdentifierName("IServiceCollection"),
-                        SyntaxFactory.Identifier("collection"),
-                        null
-                    ).AddModifiers(SyntaxFactory.Token(SyntaxKind.ThisKeyword))
-                )
-                    // Add our statements
-                    .AddBodyStatements(nodes.ToArray())
-                    // Our method returns the IServiceCollection instance
-                    .AddBodyStatements(SyntaxFactory.ReturnStatement(SyntaxFactory.IdentifierName("collection")));
-
-            // Build our extension class, it's static and public and contains our method
-            var @class = SyntaxFactory.ClassDeclaration("ServicesContainerExtensions")
-                .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
-                .AddMembers(@method);
-
-            // Build a namespace to house our method in.
-            var @namespace = SyntaxFactory.NamespaceDeclaration(SyntaxFactory.IdentifierName("__generated"))
-                .AddMembers(@class)
-                .NormalizeWhitespace();
-
-            // Create a new compliation unit.
-            // This references the Dependency injection namepsace for the IServiceCollection interface
-            var newCompilationUnit = SyntaxFactory.CompilationUnit()
-                .AddUsings(SyntaxFactory.UsingDirective(BuildQualifiedName("Microsoft.Framework.DependencyInjection")))
-                .AddMembers(@namespace)
-                .NormalizeWhitespace();
-
-            // Generate the syntax tree
-            var newSyntaxTree = SyntaxFactory.SyntaxTree(newCompilationUnit, context.CSharpCompilation.SyntaxTrees[0].Options);
-
-            // Get a new C# compliation, with our new syntax tree
-            var newCompilation = context.CSharpCompilation.AddSyntaxTrees(newSyntaxTree);*/
-
-            // Replace the compliation with our new one.
             context.CSharpCompilation = newCompilation;
         }
 

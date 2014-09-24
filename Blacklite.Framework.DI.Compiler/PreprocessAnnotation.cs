@@ -14,7 +14,8 @@ namespace Blacklite.Framework.DI.Compiler
 {
     public class Container<TDeclaration, TSymbol>
     {
-        public Container(TDeclaration declaration, TSymbol symbol) {
+        public Container(TDeclaration declaration, TSymbol symbol)
+        {
             Declaration = declaration;
             Symbol = symbol;
         }
@@ -96,14 +97,36 @@ namespace Blacklite.Framework.DI.Compiler
             }
         }
 
-        private NameSyntax BuildQualifiedName(string type)
+        private NameSyntax BuildQualifiedName(string type, int genericTypeParamCount)
         {
             // Create a qualified name for every piece of the type.
             // If you don't do this... bad things happen.
             NameSyntax nameSyntax;
             var parts = type.Split('.');
 
-            var identifiers = parts.Select(SyntaxFactory.IdentifierName);
+            var identifiers = parts.Select(SyntaxFactory.IdentifierName).Cast<SimpleNameSyntax>();
+
+            if (genericTypeParamCount > 0)
+            {
+                var name = parts.Last();
+                name = name.Substring(0, name.IndexOf("<"));
+
+                var ommitedTypeArguments = new List<TypeSyntax>();
+                for (var i = 0; i < genericTypeParamCount; i++)
+                {
+                    ommitedTypeArguments.Add(SyntaxFactory.OmittedTypeArgument());
+                }
+
+                identifiers = identifiers.Take(parts.Count() - 1).Concat(new[] {
+                    SyntaxFactory.GenericName(
+                        SyntaxFactory.Identifier(name), 
+                        SyntaxFactory.TypeArgumentList(
+                            SyntaxFactory.SeparatedList(ommitedTypeArguments)
+                        )
+                    )
+                });
+            }
+
             if (identifiers.Count() > 1)
             {
                 QualifiedNameSyntax qns = SyntaxFactory.QualifiedName(
@@ -123,7 +146,6 @@ namespace Blacklite.Framework.DI.Compiler
                 nameSyntax = identifiers.Single();
             }
 
-
             return nameSyntax;
         }
 
@@ -142,14 +164,12 @@ namespace Blacklite.Framework.DI.Compiler
                 .SelectMany(z => z.Attributes)
                 .Single(z => z.Name.ToString().Contains("ServiceDescriptor"));
 
-            // This appears safe to call on all types, generic or otherwise
             var implementationType = symbol.ConstructUnboundGenericType().ToDisplayString();
-
-            var implementationQualifiedName = BuildQualifiedName(implementationType);
+            var implementationQualifiedName = BuildQualifiedName(implementationType, symbol.TypeParameters.Count());
 
             string serviceType = null;
             IEnumerable<NameSyntax> serviceQualifiedNames = symbol.AllInterfaces
-                .Select(z => BuildQualifiedName(z.ConstructUnboundGenericType().ToDisplayString()));
+                .Select(z => BuildQualifiedName(z.ConstructUnboundGenericType().ToDisplayString(), z.TypeParameters.Count()));
 
             if (declaration.Modifiers.Any(z => z.RawKind == (int)SyntaxKind.PublicKeyword))
             {
@@ -163,7 +183,7 @@ namespace Blacklite.Framework.DI.Compiler
                 if (serviceNameTypedSymbol == null)
                     throw new Exception("Could not infer service symbol");
                 serviceType = serviceNameTypedSymbol.ConstructUnboundGenericType().ToString();
-                serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType) };
+                serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType, serviceNameTypedSymbol.TypeParameters.Count()) };
             }
 
 

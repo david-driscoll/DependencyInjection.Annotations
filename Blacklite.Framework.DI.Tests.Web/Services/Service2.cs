@@ -8,7 +8,7 @@ namespace Blacklite.Framework.DI.Tests.Web
         int Value { get; }
     }
 
-    [ServiceDescriptor(typeof(IService2), LifecycleKind.Scoped)]
+    [ServiceDescriptor(typeof(IService2), Lifecycle = LifecycleKind.Scoped)]
     class Service2 : IService2
     {
         public int Value

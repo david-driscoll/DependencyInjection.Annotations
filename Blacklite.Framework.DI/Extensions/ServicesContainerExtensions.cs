@@ -25,21 +25,17 @@ namespace Blacklite.Framework.DI
                 throw new ArgumentNullException("collection");
             }
 
-#if ASPNETCORE50
             var assembly = type.GetTypeInfo().Assembly;
-#else
-            var assembly = type.Assembly;
-#endif
 
             return collection.AddAssembly(assembly, compile);
         }
 
         private static IEnumerable<Type> GetAllBaseTypes(Type type)
         {
-            while (type.BaseType != null)
+            while (type.GetTypeInfo().BaseType != null)
             {
                 yield return type;
-                type = type.BaseType;
+                type = type.GetTypeInfo().BaseType;
             }
         }
 
@@ -54,11 +50,7 @@ namespace Blacklite.Framework.DI
                 .Select(x => new
                 {
                     ImplementationType = x,
-#if ASPNETCORE50
                     Attribute = x.GetTypeInfo().GetCustomAttribute<ServiceDescriptorAttribute>(true)
-#else
-                    Attribute = x.GetCustomAttribute<ServiceDescriptorAttribute>(true)
-#endif
                 })
                 .Where(x => x.Attribute != null);
 
@@ -69,13 +61,13 @@ namespace Blacklite.Framework.DI
                 if (service.Attribute.ServiceType == null)
                 {
                     serviceTypes = implementationType.GetInterfaces();
-                    if (implementationType.IsPublic)
+                    if (implementationType.GetTypeInfo().IsPublic)
                     {
                         // TODO:  Should this include all base types?  Should it be the lowest base type (HttpContext for example)? 
                         serviceTypes = serviceTypes.Concat(new[] { implementationType });
                     }
 
-                    if (implementationType.ContainsGenericParameters)
+                    if (implementationType.GetTypeInfo().ContainsGenericParameters)
                     {
                         var parameters = implementationType.GetGenericArguments();
 
@@ -86,7 +78,7 @@ namespace Blacklite.Framework.DI
                 }
                 else
                 {
-                    if (service.Attribute.ServiceType.IsGenericTypeDefinition)
+                    if (service.Attribute.ServiceType.GetTypeInfo().IsGenericTypeDefinition)
                     {
                         implementationType = implementationType.GetGenericTypeDefinition();
                     }
@@ -95,7 +87,6 @@ namespace Blacklite.Framework.DI
 
                 foreach (var serviceType in serviceTypes)
                 {
-
                     if (service.Attribute.ServiceType == null || // We'ere registering everything, and we've already filtered inapplicable types
                         serviceType.IsAssignableFrom(implementationType) || // Handle the most basic registration
                         service.ImplementationType.GetInterfaces() // Handle the open implementation....
@@ -105,8 +96,6 @@ namespace Blacklite.Framework.DI
                         )
                     {
                         var lifecycle = service.Attribute.Lifecycle;
-
-                        Console.WriteLine("{0}, {1}", implementationType.FullName, serviceType.FullName);
 
                         collection.Add(new ServiceDescriptor()
                         {
@@ -123,8 +112,6 @@ namespace Blacklite.Framework.DI
                         );
                     }
                 }
-                Console.WriteLine("----------");
-
             }
 
             return collection;

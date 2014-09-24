@@ -52,8 +52,6 @@ namespace Blacklite.Framework.DI.Compiler
                         parent = parent.Parent;
                     }
                     classSyntax = parent as ClassDeclarationSyntax;
-                    Console.WriteLine(classSyntax.Identifier);
-                    Console.WriteLine(expression.Declaration.ArgumentList.Arguments[0].ToString());
 
                     var replace = false;
 
@@ -74,7 +72,6 @@ namespace Blacklite.Framework.DI.Compiler
 
                     if (replace)
                     {
-                        //Console.WriteLine(expression.Declaration.ArgumentList.Arguments[1].ToString());
                         yield return expression;
                     }
                 }
@@ -145,22 +142,27 @@ namespace Blacklite.Framework.DI.Compiler
                 .SelectMany(z => z.Attributes)
                 .Single(z => z.Name.ToString().Contains("ServiceDescriptor"));
 
-            var implementationType = symbol.ToDisplayString();
+            // This appears safe to call on all types, generic or otherwise
+            var implementationType = symbol.ConstructUnboundGenericType().ToDisplayString();
+
             var implementationQualifiedName = BuildQualifiedName(implementationType);
 
             string serviceType = null;
             IEnumerable<NameSyntax> serviceQualifiedNames = symbol.AllInterfaces
-                .Select(z => BuildQualifiedName(z.ToDisplayString()));
+                .Select(z => BuildQualifiedName(z.ConstructUnboundGenericType().ToDisplayString()));
 
             if (declaration.Modifiers.Any(z => z.RawKind == (int)SyntaxKind.PublicKeyword))
             {
+                // TODO:  Should this include all base types?  Should it be the lowest base type (HttpContext for example)? 
                 serviceQualifiedNames = serviceQualifiedNames.Union(new NameSyntax[] { implementationQualifiedName });
             }
 
             if (attributeSymbol.ConstructorArguments.Count() > 0 && attributeSymbol.ConstructorArguments[0].Value != null)
             {
-                Console.WriteLine(attributeSymbol.ConstructorArguments[0].Value);
-                serviceType = attributeSymbol.ConstructorArguments[0].Value.ToString();
+                var serviceNameTypedSymbol = (INamedTypeSymbol)attributeSymbol.ConstructorArguments[0].Value;
+                if (serviceNameTypedSymbol == null)
+                    throw new Exception("Could not infer service symbol");
+                serviceType = serviceNameTypedSymbol.ConstructUnboundGenericType().ToString();
                 serviceQualifiedNames = new NameSyntax[] { BuildQualifiedName(serviceType) };
             }
 
@@ -176,7 +178,7 @@ namespace Blacklite.Framework.DI.Compiler
             // TODO: Enforce implementation is assignable to service
             // Diagnostic error?
             var potentialBaseTypes = baseTypes.Concat(
-                symbol.AllInterfaces.Select(z => z.ToDisplayString())
+                symbol.AllInterfaces.Select(z => z.ConstructUnboundGenericType().ToDisplayString())
             );
 
             // This is where some of the power comes out.
@@ -204,8 +206,13 @@ namespace Blacklite.Framework.DI.Compiler
                 );
             }
 
-            // Determine the lifecycle that was given.
-            var lifecycle = GetLifecycle((int)attributeSymbol.ConstructorArguments[1].Value);
+            var hasLifecycle = attributeSymbol.NamedArguments.Any(z => z.Key == "Lifecycle");
+            var lifecycle = "Transient";
+
+            if (hasLifecycle)
+            {
+                lifecycle = GetLifecycle((int)attributeSymbol.NamedArguments.Single(z => z.Key == "Lifecycle").Value.Value);
+            }
 
             // Build the Statement
             return GetCollectionExpressionStatement(lifecycle, serviceQualifiedNames, implementationQualifiedName);
@@ -213,7 +220,7 @@ namespace Blacklite.Framework.DI.Compiler
 
         public string GetLifecycle(int enumValue)
         {
-            string lifecycle;
+            string lifecycle = "Transient";
             switch (enumValue)
             {
                 case 1:
@@ -221,9 +228,6 @@ namespace Blacklite.Framework.DI.Compiler
                     break;
                 case 0:
                     lifecycle = "Singleton";
-                    break;
-                default:
-                    lifecycle = "Transient";
                     break;
             }
 
@@ -267,7 +271,6 @@ namespace Blacklite.Framework.DI.Compiler
                 });
 
 
-            Console.WriteLine(string.Join(", ", context.CSharpCompilation.GetDiagnostics().Select(z => z.ToString())));
             var addAssemblyMethodCalls = containers
                 .SelectMany(ctx => GetAddAssemblyMethodCall(ctx.SyntaxTree, ctx.Model));
 
@@ -280,7 +283,6 @@ namespace Blacklite.Framework.DI.Compiler
             foreach (var method in addAssemblyMethodCalls)
             {
                 var identifierName = ((MemberAccessExpressionSyntax)method.Declaration.Expression).Expression.ToString();
-                Console.WriteLine(identifierName);
 
                 var methodNodes = nodes.SelectMany(x => x(identifierName));
 

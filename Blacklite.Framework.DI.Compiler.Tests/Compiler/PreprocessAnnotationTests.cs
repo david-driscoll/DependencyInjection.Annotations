@@ -96,18 +96,20 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void DefaultsToTransient()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA))]
-                public class ProviderA : IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA))]
+                    public class ProviderA : IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -129,7 +131,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+            services.AddTransient(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -145,18 +147,20 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void UnderstandsTransient()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Transient)]
-                public class ProviderA : IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Transient)]
+                    public class ProviderA : IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -178,7 +182,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddTransient(typeof (IProviderA), typeof (ProviderA));
+            services.AddTransient(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -194,18 +198,20 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void UnderstandsScoped()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Scoped)]
-                public class ProviderA : IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Scoped)]
+                    public class ProviderA : IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -227,7 +233,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddScoped(typeof (IProviderA), typeof (ProviderA));
+            services.AddScoped(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -242,18 +248,20 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void UnderstandsSingleton()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA : IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA : IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -275,7 +283,7 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
+            services.AddSingleton(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -290,60 +298,68 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void UnderstandsEverything()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA : IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA : IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderB1
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderB1))]
-                public class ProviderB1 : IProviderB1
-                {
-                    public decimal GetValue()
+                    public interface IProviderB1
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderB1))]
+                    public class ProviderB1 : IProviderB1
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderB
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderB), Lifecycle = LifecycleKind.Transient)]
-                public class ProviderB : IProviderB
-                {
-                    public decimal GetValue()
+                    public interface IProviderB
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderB), Lifecycle = LifecycleKind.Transient)]
+                    public class ProviderB : IProviderB
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderC
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderC), Lifecycle = LifecycleKind.Scoped)]
-                public class ProviderC : IProviderC
-                {
-                    public decimal GetValue()
+                    public interface IProviderC
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderC), Lifecycle = LifecycleKind.Scoped)]
+                    public class ProviderC : IProviderC
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -365,10 +381,10 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
-            services.AddTransient(typeof (IProviderB1), typeof (ProviderB1));
-            services.AddTransient(typeof (IProviderB), typeof (ProviderB));
-            services.AddScoped(typeof (IProviderC), typeof (ProviderC));
+            services.AddSingleton(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
+            services.AddTransient(typeof (Temp.Providers.IProviderB1), typeof (Temp.Providers.ProviderB1));
+            services.AddTransient(typeof (Temp.Providers.IProviderB), typeof (Temp.Providers.ProviderB));
+            services.AddScoped(typeof (Temp.Providers.IProviderC), typeof (Temp.Providers.ProviderC));
         }
 
         public static int Main()
@@ -383,23 +399,25 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void ReportsDiagnostics()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB
-                {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA : IProviderB
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    public interface IProviderB
+                    {
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA : IProviderB
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -571,23 +589,25 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void DiagnosticsStillFunctionEvenIfReplacementNeverHappens()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB
-                {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA : IProviderB
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    public interface IProviderB
+                    {
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA : IProviderB
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -609,28 +629,30 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void RegistersAllInterfacesIfServiceTypeIsNotDefined()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB
-                {
-                    decimal GetValue2();
-                }
-
-                [ServiceDescriptor(Lifecycle = LifecycleKind.Scoped)]
-                class ProviderA : IProviderB, IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
                     }
 
-                    public decimal GetValue2()
+                    public interface IProviderB
                     {
-                        return 9000.99M;
+                        decimal GetValue2();
+                    }
+
+                    [ServiceDescriptor(Lifecycle = LifecycleKind.Scoped)]
+                    class ProviderA : IProviderB, IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
+
+                        public decimal GetValue2()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -652,8 +674,8 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddScoped(typeof (IProviderB), typeof (ProviderA));
-            services.AddScoped(typeof (IProviderA), typeof (ProviderA));
+            services.AddScoped(typeof (Temp.Providers.IProviderB), typeof (Temp.Providers.ProviderA));
+            services.AddScoped(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -668,28 +690,30 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void RegistersAllInterfacesAndTheClassIfTheClassIsPublicIfServiceTypeIsNotDefined()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB
-                {
-                    decimal GetValue2();
-                }
-
-                [ServiceDescriptor( Lifecycle = LifecycleKind.Singleton )]
-                public class ProviderA : IProviderB, IProviderA
-                {
-                    public decimal GetValue()
+                    public interface IProviderA
                     {
-                        return 9000.99M;
+                        decimal GetValue();
                     }
 
-                    public decimal GetValue2()
+                    public interface IProviderB
                     {
-                        return 9000.99M;
+                        decimal GetValue2();
+                    }
+
+                    [ServiceDescriptor( Lifecycle = LifecycleKind.Singleton )]
+                    public class ProviderA : IProviderB, IProviderA
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
+
+                        public decimal GetValue2()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -711,9 +735,9 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddSingleton(typeof (IProviderB), typeof (ProviderA));
-            services.AddSingleton(typeof (IProviderA), typeof (ProviderA));
-            services.AddSingleton(typeof (ProviderA), typeof (ProviderA));
+            services.AddSingleton(typeof (Temp.Providers.IProviderB), typeof (Temp.Providers.ProviderA));
+            services.AddSingleton(typeof (Temp.Providers.IProviderA), typeof (Temp.Providers.ProviderA));
+            services.AddSingleton(typeof (Temp.Providers.ProviderA), typeof (Temp.Providers.ProviderA));
         }
 
         public static int Main()
@@ -728,60 +752,68 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void UnderstandsOpenEverything()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA<T> : IProviderA<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderA<T,Y>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA<,>), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA<T,Y> : IProviderA<T,Y>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderB1<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderB1<>))]
-                public class ProviderB1<T> : IProviderB1<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderB1<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderB1<>))]
+                    public class ProviderB1<T> : IProviderB1<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
+                }
+                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
+                {
+                    public interface IProviderB<T>
+                    {
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderB<T>), Lifecycle = LifecycleKind.Transient)]
+                    public class ProviderB<T> : IProviderB<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderB<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderB<T>), Lifecycle = LifecycleKind.Transient)]
-                public class ProviderB<T> : IProviderB<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderC<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
                     }
-                }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)))
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderC<T>
-                {
-                    decimal GetValue();
-                }
 
-                [ServiceDescriptor(typeof(IProviderC<>), Lifecycle = LifecycleKind.Scoped)]
-                public class ProviderC<T> : IProviderC<T>
-                {
-                    public decimal GetValue()
+                    [ServiceDescriptor(typeof(IProviderC<>), Lifecycle = LifecycleKind.Scoped)]
+                    public class ProviderC<T> : IProviderC<T>
                     {
-                        return 9000.99M;
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -803,10 +835,10 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddSingleton(typeof (IProviderA<>), typeof (ProviderA<>));
-            services.AddTransient(typeof (IProviderB1<>), typeof (ProviderB1<>));
-            services.AddTransient(typeof (IProviderB<>), typeof (ProviderB<>));
-            services.AddScoped(typeof (IProviderC<>), typeof (ProviderC<>));
+            services.AddSingleton(typeof (Temp.Providers.IProviderA<, >), typeof (Temp.Providers.ProviderA<, >));
+            services.AddTransient(typeof (Temp.Providers.IProviderB1<>), typeof (Temp.Providers.ProviderB1<>));
+            services.AddTransient(typeof (Temp.Providers.IProviderB<>), typeof (Temp.Providers.ProviderB<>));
+            services.AddScoped(typeof (Temp.Providers.IProviderC<>), typeof (Temp.Providers.ProviderC<>));
         }
 
         public static int Main()
@@ -821,23 +853,25 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void ReportsOpenDiagnostics()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB<T>
-                {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA<T> : IProviderB<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderA<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    public interface IProviderB<T>
+                    {
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA<T> : IProviderB<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -860,23 +894,25 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void OpenDiagnosticsStillFunctionEvenIfReplacementNeverHappens()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB<T>
-                {
-                    decimal GetValue();
-                }
-
-                [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
-                public class ProviderA<T> : IProviderB<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderA<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
+                    }
+
+                    public interface IProviderB<T>
+                    {
+                        decimal GetValue();
+                    }
+
+                    [ServiceDescriptor(typeof(IProviderA<>), Lifecycle = LifecycleKind.Singleton)]
+                    public class ProviderA<T> : IProviderB<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -898,28 +934,30 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void RegistersAllInterfacesIfOpenServiceTypeIsNotDefined()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB<T>
-                {
-                    decimal GetValue2();
-                }
-
-                [ServiceDescriptor(Lifecycle = LifecycleKind.Scoped)]
-                class ProviderA<T> : IProviderB<T>, IProviderA<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderA<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
                     }
 
-                    public decimal GetValue2()
+                    public interface IProviderB<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue2();
+                    }
+
+                    [ServiceDescriptor(Lifecycle = LifecycleKind.Scoped)]
+                    class ProviderA<T> : IProviderB<T>, IProviderA<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
+
+                        public decimal GetValue2()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -941,8 +979,8 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddScoped(typeof (IProviderB<>), typeof (ProviderA<>));
-            services.AddScoped(typeof (IProviderA<>), typeof (ProviderA<>));
+            services.AddScoped(typeof (Temp.Providers.IProviderB<>), typeof (Temp.Providers.ProviderA<>));
+            services.AddScoped(typeof (Temp.Providers.IProviderA<>), typeof (Temp.Providers.ProviderA<>));
         }
 
         public static int Main()
@@ -957,28 +995,30 @@ namespace Blacklite.Framework.DI.Compiler.Tests
         public void RegistersAllInterfacesAndTheClassIfTheClassIsPublicIfOpenServiceTypeIsNotDefined()
         {
             var compilation = GetCompilation()
-                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"
-                public interface IProviderA<T>
+                .AddSyntaxTrees(SyntaxFactory.ParseSyntaxTree(SourceText.From(@"namespace Temp.Providers
                 {
-                    decimal GetValue();
-                }
-
-                public interface IProviderB<T>
-                {
-                    decimal GetValue2();
-                }
-
-                [ServiceDescriptor( Lifecycle = LifecycleKind.Singleton )]
-                public class ProviderA<T> : IProviderB<T>, IProviderA<T>
-                {
-                    public decimal GetValue()
+                    public interface IProviderA<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue();
                     }
 
-                    public decimal GetValue2()
+                    public interface IProviderB<T>
                     {
-                        return 9000.99M;
+                        decimal GetValue2();
+                    }
+
+                    [ServiceDescriptor( Lifecycle = LifecycleKind.Singleton )]
+                    public class ProviderA<T> : IProviderB<T>, IProviderA<T>
+                    {
+                        public decimal GetValue()
+                        {
+                            return 9000.99M;
+                        }
+
+                        public decimal GetValue2()
+                        {
+                            return 9000.99M;
+                        }
                     }
                 }", Encoding.UTF8), CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Experimental)));
 
@@ -1000,9 +1040,9 @@ namespace Blacklite.Framework.DI.Compiler.Tests
     {
         void Configure(IServiceCollection services)
         {
-            services.AddSingleton(typeof (IProviderB<>), typeof (ProviderA<>));
-            services.AddSingleton(typeof (IProviderA<>), typeof (ProviderA<>));
-            services.AddSingleton(typeof (ProviderA<>), typeof (ProviderA<>));
+            services.AddSingleton(typeof (Temp.Providers.IProviderB<>), typeof (Temp.Providers.ProviderA<>));
+            services.AddSingleton(typeof (Temp.Providers.IProviderA<>), typeof (Temp.Providers.ProviderA<>));
+            services.AddSingleton(typeof (Temp.Providers.ProviderA<>), typeof (Temp.Providers.ProviderA<>));
         }
 
         public static int Main()

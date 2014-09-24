@@ -184,8 +184,8 @@ namespace Blacklite.Framework.DI.Tests
 
             var descriptor = new ServiceDescriptor()
             {
-                ServiceType = typeof(IOpenProviderA<>),
-                ImplementationType = typeof(OpenProviderA<>),
+                ServiceType = typeof(IOpenProviderA<,>),
+                ImplementationType = typeof(OpenProviderA<,>),
                 Lifecycle = LifecycleKind.Singleton
             };
 

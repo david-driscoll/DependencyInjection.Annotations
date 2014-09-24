@@ -5,9 +5,11 @@ using Microsoft.AspNet.Mvc;
 
 namespace Blacklite.Framework.DI.Tests.Web.Controllers
 {
-    public class HomeController(IService1 service1) : Controller
+    public class HomeController(IService1 service1, IOpenProviderB<string> openProviderB, IOpenProviderC<string> openProviderC) : Controller
     {
         private IService1 _service1 = service1;
+        private IOpenProviderB<string> _openProviderB = openProviderB;
+        private IOpenProviderC<string> _openProviderC = openProviderC;
 
         public IActionResult Index()
         {

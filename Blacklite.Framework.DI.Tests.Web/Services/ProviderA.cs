@@ -8,7 +8,7 @@ namespace Blacklite.Framework.DI.Tests.Web
         decimal GetValue();
     }
 
-    [ServiceDescriptor(typeof(IProviderA), LifecycleKind.Singleton)]
+    [ServiceDescriptor(typeof(IProviderA), Lifecycle = LifecycleKind.Singleton)]
     public class ProviderA : IProviderA
     {
         public decimal GetValue()
